@@ -1,0 +1,64 @@
+//
+// Copyright (C) YuqiaoZhang(HanetakaChou)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+#ifndef _FORWARD_SHADING_RESOURCE_BINDING_BSLI_
+#define _FORWARD_SHADING_RESOURCE_BINDING_BSLI_ 1
+
+#include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
+#include "surface.bsli"
+
+// 1 0 4 -> 1 0 Surface_Buffer_Count
+// 1 4 4 -> 1 Surface_Buffer_Count Surface_Texture_Count
+
+brx_cbuffer(forward_shading_none_update_set_uniform_buffer_binding, 0, 0)
+{
+    brx_column_major brx_float4x4 g_view_transform;
+    brx_column_major brx_float4x4 g_projection_transform;
+    brx_column_major brx_float4x4 g_inverse_view_transform;
+    brx_column_major brx_float4x4 g_inverse_projection_transform;
+};
+
+brx_sampler_state(g_shared_none_update_sampler, 0, 1);
+
+brx_cbuffer(forward_shading_per_environment_lighting_update_set_uniform_buffer_binding, 1, 0)
+{
+    brx_column_major brx_float4x4 g_world_to_environment_map_transform;
+};
+
+brx_read_only_byte_address_buffer(g_irradiance_coefficients, 1, 1);
+
+brx_cbuffer(forward_shading_per_surface_group_update_set_uniform_buffer_binding, 2, 0)
+{
+    brx_column_major brx_float4x4 g_model_transform;
+};
+
+brx_read_only_byte_address_buffer_array(g_surface_buffers, 3, 0, 4);
+
+brx_texture_2d_array(g_surface_images, 3, 4, 4);
+
+#define forward_shading_root_signature_macro                                                            \
+    brx_root_signature_root_parameter_begin(forward_shading_root_signature_name)                        \
+    brx_root_signature_root_cbv(0, 0) brx_root_signature_root_parameter_split                           \
+    brx_root_signature_root_descriptor_table_sampler(0, 1, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
+    brx_root_signature_root_descriptor_table_srv(1, 1, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_cbv(2, 0) brx_root_signature_root_parameter_split                           \
+    brx_root_signature_root_descriptor_table_srv(3, 0, 4) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(3, 4, 4)                                               \
+    brx_root_signature_root_parameter_end
+
+#endif

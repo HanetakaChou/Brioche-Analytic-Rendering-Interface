@@ -1,0 +1,53 @@
+//
+// Copyright (C) YuqiaoZhang(HanetakaChou)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+#ifndef _DEFORMING_RESOURCE_BINDING_BSLI_
+#define _DEFORMING_RESOURCE_BINDING_BSLI_ 1
+
+#include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
+#include "surface.bsli"
+
+// D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION 65535
+// maxComputeWorkGroupCount 65535
+#define DEFORMING_MAX_COMPUTE_DISPATCH_THREAD_GROUPS_PER_DIMENSION 65535u
+
+#define MORPH_TARGET_WEIGHT_COUNT 20u
+
+// D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT 4096
+// Vulkan Core: maxUniformBufferRange 16384 = 16 * 1024
+// Vulkan Roadmap 2022: maxUniformBufferRange 65536 = 16 * 4096
+#define DEFORMING_MAX_MORPH_TARGET_WEIGHT_COUNT 24u
+#define DEFORMING_MAX_JOINT_COUNT 2045u
+
+brx_cbuffer(deforming_per_surface_group_update_set_uniform_buffer_binding, 0, 0)
+{
+    brx_float4 g_packed_vector_morph_target_weights[brx_int(DEFORMING_MAX_MORPH_TARGET_WEIGHT_COUNT) / 4];
+    brx_float4 g_dual_quaternions[2 * brx_int(DEFORMING_MAX_JOINT_COUNT)];
+};
+
+brx_read_only_byte_address_buffer_array(g_surface_input_buffers, 1, 0, 43);
+
+brx_write_only_byte_address_buffer_array(g_surface_output_buffers, 1, 1, 2);
+
+#define deforming_root_signature_macro                                                              \
+    brx_root_signature_root_parameter_begin(deforming_root_signature_name)                          \
+    brx_root_signature_root_cbv(0, 0) brx_root_signature_root_parameter_split                       \
+    brx_root_signature_root_descriptor_table_srv(1, 0, 43) brx_root_signature_root_parameter_split  \
+    brx_root_signature_root_descriptor_table_uav(1, 1, 2)                                           \
+    brx_root_signature_root_parameter_end
+
+#endif

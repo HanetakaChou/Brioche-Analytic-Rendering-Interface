@@ -1,0 +1,36 @@
+//
+// Copyright (C) YuqiaoZhang(HanetakaChou)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+#ifndef _SHARED_NONE_UPDATE_SET_UNIFORM_BUFFER_BINDING_BSLI_
+#define _SHARED_NONE_UPDATE_SET_UNIFORM_BUFFER_BINDING_BSLI_ 1
+
+#include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
+
+brx_cbuffer(shared_none_update_set_uniform_buffer_binding, 0, 0)
+{
+    brx_column_major brx_float4x4 g_view_transform;
+    brx_column_major brx_float4x4 g_projection_transform;
+    brx_column_major brx_float4x4 g_inverse_view_transform;
+    brx_column_major brx_float4x4 g_inverse_projection_transform;
+
+    brx_float g_view_port_width;
+    brx_float g_view_port_height;
+    brx_uint _unused_padding_1;
+    brx_uint _unused_padding_2;
+};
+
+#endif

@@ -1,0 +1,117 @@
+//
+// Copyright (C) YuqiaoZhang(HanetakaChou)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+#ifndef _SURFACE_BSLI_
+#define _SURFACE_BSLI_ 1
+
+#define SURFACE_VERTEX_POSITION_BUFFER_STRIDE 12u
+#define SURFACE_VERTEX_VARYING_BUFFER_STRIDE 12u
+#define SURFACE_VERTEX_BLENDING_BUFFER_STRIDE 12u
+#define SURFACE_UINT16_INDEX_BUFFER_STRIDE 2u
+#define SURFACE_UINT32_INDEX_BUFFER_STRIDE 4u
+
+#define SURFACE_BUFFER_FLAG_UINT16_INDEX 0x1u
+#define SURFACE_TEXTURE_FLAG_EMISSIVE 0x2u
+#define SURFACE_TEXTURE_FLAG_NORMAL 0x4u
+#define SURFACE_TEXTURE_FLAG_BASE_COLOR 0x8u
+#define SURFACE_TEXTURE_FLAG_METALLIC_ROUGHNESS 0x10u
+
+#define DEFORMING_SURFACE_INPUT_VERTEX_POSITION_BUFFER_INDEX 0u
+#define DEFORMING_SURFACE_INPUT_VERTEX_VARYING_BUFFER_INDEX 1u
+#define DEFORMING_SURFACE_INPUT_VERTEX_BLENDING_BUFFER_INDEX 2u
+#define DEFORMING_SURFACE_INPUT_BUFFER_COUNT 3u
+
+#define DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_POSITION_BUFFER_INDEX 0u
+#define DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_VARYING_BUFFER_INDEX 1u
+#define DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT 2u
+
+#define DEFORMING_SURFACE_OUTPUT_VERTEX_POSITION_BUFFER_INDEX 0u
+#define DEFORMING_SURFACE_OUTPUT_VERTEX_VARYING_BUFFER_INDEX 1u
+#define DEFORMING_SURFACE_OUTPUT_BUFFER_COUNT 2u
+
+#define FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX 0u
+#define FORWARD_SHADING_SURFACE_VERTEX_VARYING_BUFFER_INDEX 1u
+#define FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX 2u
+#define FORWARD_SHADING_SURFACE_AUXILIARY_BUFFER_INDEX 3u
+#define FORWARD_SHADING_SURFACE_BUFFER_COUNT 4u
+
+#define FORWARD_SHADING_SURFACE_EMISSIVE_TEXTURE_INDEX 0u
+#define FORWARD_SHADING_SURFACE_NORMAL_TEXTURE_INDEX 1u
+#define FORWARD_SHADING_SURFACE_BASE_COLOR_TEXTURE_INDEX 2u
+#define FORWARD_SHADING_SURFACE_METALLIC_ROUGHNESS_TEXTURE_INDEX 3u
+#define FORWARD_SHADING_SURFACE_TEXTURE_COUNT 4u
+
+#if defined(__cplusplus)
+
+static_assert(sizeof(uint16_t) == SURFACE_UINT16_INDEX_BUFFER_STRIDE, "");
+static_assert(sizeof(uint32_t) == SURFACE_UINT32_INDEX_BUFFER_STRIDE, "");
+
+struct surface_vertex_position_buffer_element
+{
+    // R32G32B32_FLOAT
+    float m_position[3];
+};
+
+static_assert(sizeof(surface_vertex_position_buffer_element) == SURFACE_VERTEX_POSITION_BUFFER_STRIDE, "");
+static_assert(0U == (SURFACE_VERTEX_POSITION_BUFFER_STRIDE % 4U), "");
+
+struct surface_vertex_varying_buffer_element
+{
+    // R16G16_SNORM (octahedron map)
+    uint32_t m_normal;
+    // R15G15B2_SNORM (octahedron map + tangent w)
+    uint32_t m_tangent;
+    // use R16G16_SFLOAT instead of R16G16_UNORM to support wrap 
+    uint32_t m_texcoord;
+};
+
+static_assert(sizeof(surface_vertex_varying_buffer_element) == SURFACE_VERTEX_VARYING_BUFFER_STRIDE, "");
+static_assert(0U == (SURFACE_VERTEX_VARYING_BUFFER_STRIDE % 4U), "");
+
+struct surface_vertex_blending_buffer_element
+{
+    // R16G16B16A16_UINT (xy)
+    uint32_t m_indices_xy;
+    // R16G16B16A16_UINT (wz)
+    uint32_t m_indices_wz;
+    // R8G8B8A8_UNORM
+    uint32_t m_weights;
+};
+
+static_assert(sizeof(surface_vertex_blending_buffer_element) == SURFACE_VERTEX_BLENDING_BUFFER_STRIDE, "");
+static_assert(0U == (SURFACE_VERTEX_BLENDING_BUFFER_STRIDE % 4U), "");
+
+struct surface_auxiliary_buffer
+{
+    uint32_t m_buffer_texture_flags;
+    float m_emissive_factor_x;
+    float m_emissive_factor_y;
+    float m_emissive_factor_z;
+
+    float m_base_color_factor_x;
+    float m_base_color_factor_y;
+    float m_base_color_factor_z;
+    float m_base_color_factor_w;
+
+    float m_normal_scale;
+    float m_metallic_factor;
+    float m_roughness_factor;
+    uint32_t _unused_padding_2;
+};
+#endif
+
+#endif

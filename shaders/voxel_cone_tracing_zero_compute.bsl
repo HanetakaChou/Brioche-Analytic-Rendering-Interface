@@ -1,0 +1,52 @@
+//
+// Copyright (C) YuqiaoZhang(HanetakaChou)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+#include "post_processing_resource_binding.bsli"
+#include "../../Voxel-Cone-Tracing/shaders/brx_voxel_cone_tracing_zero_compute.bsli"
+
+#include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
+
+brx_int3 brx_vct_application_bridge_get_clipmap_mask_dimension()
+{
+    return brx_read_write_texture_3d_uint_get_dimension(u_clipmap_texture_mask);
+}
+
+void brx_vct_application_bridge_set_clipmap_mask(in brx_int3 in_mask_texture_coordinates, in brx_uint in_mask)
+{
+    brx_store_3d_uint(u_clipmap_texture_mask, in_mask_texture_coordinates, in_mask);
+}
+
+brx_int3 brx_vct_application_bridge_get_clipmap_opacity_dimension()
+{
+
+    return brx_write_only_texture_3d_uint_get_dimension(u_clipmap_texture_opacity);
+}
+
+void brx_vct_application_bridge_set_clipmap_opacity(in brx_int3 in_opacity_texture_coordinates, in brx_uint in_packed_opacity)
+{
+    brx_store_3d_uint(u_clipmap_texture_opacity, in_opacity_texture_coordinates, in_packed_opacity);
+}
+
+brx_int3 brx_vct_application_bridge_get_clipmap_illumination_dimension()
+{
+    return brx_write_only_texture_3d_uint_get_dimension(u_clipmap_texture_illumination);
+}
+
+void brx_vct_application_bridge_set_clipmap_illumination(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
+{
+    brx_store_3d_uint(u_clipmap_texture_illumination, in_illumination_texture_coordinates, in_packed_illumination);
+}

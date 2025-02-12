@@ -1,0 +1,3 @@
+EXPORTS
+	brx_anari_new_device
+	brx_anari_release_device

@@ -1,0 +1,113 @@
+//
+// Copyright (C) YuqiaoZhang(HanetakaChou)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+#ifndef _SURFACE_SLI_
+#define _SURFACE_SLI_ 1
+
+#define g_surface_vertex_position_buffer_stride 12u
+#define g_surface_vertex_varying_buffer_stride 12u
+#define g_surface_vertex_blending_buffer_stride 12u
+#define g_surface_uint16_index_buffer_stride 2u
+#define g_surface_uint32_index_buffer_stride 4u
+
+#define Surface_Buffer_Flag_UInt16_Index 0x1u
+#define Surface_Texture_Flag_Emissive 0x2u
+#define Surface_Texture_Flag_Normal 0x4u
+#define Surface_Texture_Flag_Base_Color 0x8u
+#define Surface_Texture_Flag_Metallic_Roughness 0x10u
+
+#define Deforming_Surface_Buffer_Vertex_Position_Index 0u
+#define Deforming_Surface_Buffer_Vertex_Varying_Index 1u
+#define Deforming_Surface_Buffer_Vertex_Blending_Index 2u
+#define Deforming_Surface_Buffer_Count 3u
+
+#define Deforming_Surface_Buffer_Instance_Vertex_Position_Index 0u
+#define Deforming_Surface_Buffer_Instance_Vertex_Varying_Index 1u
+#define Deforming_Surface_Buffer_Instance_Count 2u
+
+#define Forward_Shading_Surface_Buffer_Vertex_Position_Index 0u
+#define Forward_Shading_Surface_Buffer_Vertex_Varying_Index 1u
+#define Forward_Shading_Surface_Buffer_Index_Index 2u
+#define Forward_Shading_Surface_Buffer_Auxiliary_Index 3u
+#define Forward_Shading_Surface_Buffer_Count 4u
+
+#define Forward_Shading_Surface_Texture_Emissive_Index 0u
+#define Forward_Shading_Surface_Texture_Normal_Index 1u
+#define Forward_Shading_Surface_Texture_Base_Color_Index 2u
+#define Forward_Shading_Surface_Texture_Metallic_Roughness_Index 3u
+#define Forward_Shading_Surface_Texture_Count 4u
+
+#if defined(__cplusplus)
+
+static_assert((sizeof(uint16_t)) == g_surface_uint16_index_buffer_stride, "");
+static_assert((sizeof(uint32_t)) == g_surface_uint32_index_buffer_stride, "");
+
+struct surface_vertex_position_buffer_element
+{
+    // R32G32B32_FLOAT
+    float m_position[3];
+};
+
+static_assert((sizeof(surface_vertex_position_buffer_element)) == g_surface_vertex_position_buffer_stride, "");
+static_assert(0U == (g_surface_vertex_position_buffer_stride % 4U), "");
+
+struct surface_vertex_varying_buffer_element
+{
+    // R16G16_SNORM (octahedron map)
+    uint32_t m_normal;
+    // R15G15B2_SNORM (octahedron map + tangent w)
+    uint32_t m_tangent;
+    // R16G16_UNORM
+    uint32_t m_texcoord;
+};
+
+static_assert((sizeof(surface_vertex_varying_buffer_element)) == g_surface_vertex_varying_buffer_stride, "");
+static_assert(0U == (g_surface_vertex_varying_buffer_stride % 4U), "");
+
+struct surface_vertex_blending_buffer_element
+{
+    // R16G16B16A16_UINT (xy)
+    uint32_t m_indices_xy;
+    // R16G16B16A16_UINT (wz)
+    uint32_t m_indices_wz;
+    // R8G8B8A8_UNORM
+    uint32_t m_weights;
+};
+
+static_assert((sizeof(surface_vertex_blending_buffer_element)) == g_surface_vertex_blending_buffer_stride, "");
+static_assert(0U == (g_surface_vertex_blending_buffer_stride % 4U), "");
+
+struct surface_auxiliary_buffer
+{
+    uint32_t m_buffer_texture_flags;
+    float m_emissive_factor_x;
+    float m_emissive_factor_y;
+    float m_emissive_factor_z;
+
+    float m_normal_scale;
+    float m_base_color_factor_x;
+    float m_base_color_factor_y;
+    float m_base_color_factor_z;
+
+    float m_metallic_factor;
+    float m_roughness_factor;
+    uint32_t _unused_padding_1;
+    uint32_t _unused_padding_2;
+};
+#endif
+
+#endif

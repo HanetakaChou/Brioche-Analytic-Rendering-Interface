@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="build-GLSL">
+      <UniqueIdentifier>{6fa5da58-2539-467f-8955-71bef0cd4675}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\build-GLSL\GLSL.mk">
+      <Filter>build-GLSL</Filter>
+    </None>
+  </ItemGroup>
+</Project>

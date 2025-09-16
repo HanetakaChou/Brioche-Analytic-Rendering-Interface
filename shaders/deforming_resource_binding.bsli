@@ -39,9 +39,9 @@ brx_cbuffer(deforming_per_surface_group_update_set_uniform_buffer_binding, 0, 0)
     brx_float4 g_dual_quaternions[2 * brx_int(DEFORMING_MAX_JOINT_COUNT)];
 };
 
-brx_read_only_byte_address_buffer_array(g_surface_input_buffers, 1, 0, 43);
+brx_read_only_byte_address_buffer_table(g_surface_input_buffers, 1, 0, 43);
 
-brx_write_only_byte_address_buffer_array(g_surface_output_buffers, 1, 1, 2);
+brx_write_only_byte_address_buffer_table(g_surface_output_buffers, 1, 1, 2);
 
 #define deforming_root_signature_macro                                                              \
     brx_root_signature_root_parameter_begin(deforming_root_signature_name)                          \

@@ -16,9 +16,9 @@
 //
 
 #include "environment_lighting_resource_binding.bsli"
-#include "../../Environment-Lighting/shaders/brx_environment_lighting_sh_projection_clear.bsli"
+#include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_projection_environment_map_clear.bsli"
 
-void brx_vct_application_bridge_set_sh_irradiance_coefficient(in brx_int in_sh_irradiance_coefficient_monochromatic_index, in brx_uint in_sh_coefficient)
+void brx_sh_application_bridge_set_environment_map_sh_coefficient(in brx_int in_environment_map_sh_coefficient_monochromatic_index, in brx_uint in_sh_coefficient)
 {
-    brx_byte_address_buffer_store(u_environment_lighting_sh_irradiance_coefficients, (in_sh_irradiance_coefficient_monochromatic_index << 2), in_sh_coefficient);
+    brx_byte_address_buffer_store(u_environment_map_sh_coefficients, (in_environment_map_sh_coefficient_monochromatic_index << 2), in_sh_coefficient);
 }

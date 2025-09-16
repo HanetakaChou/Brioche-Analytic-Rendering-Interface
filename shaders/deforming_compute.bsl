@@ -17,7 +17,7 @@
 
 #include "deforming_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
-#include "../../Environment-Lighting/shaders/brx_octahedral_mapping.bsli"
+#include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 #if defined(GL_SPIRV) || defined(VULKAN)
 #define brx_dual_quaternion mat2x4
 #include "../../DLB/DLB.glsli"

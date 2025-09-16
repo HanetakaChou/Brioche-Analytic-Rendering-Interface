@@ -17,7 +17,7 @@
 
 #include "forward_shading_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
-#include "../../Environment-Lighting/shaders/brx_octahedral_mapping.bsli"
+#include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 
 brx_root_signature(forward_shading_root_signature_macro, forward_shading_root_signature_name)
 brx_vertex_shader_parameter_begin(main)

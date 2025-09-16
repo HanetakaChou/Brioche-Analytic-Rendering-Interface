@@ -44,8 +44,6 @@ class brx_anari_pal_surface_group;
 // [Pipeline Throttling](https://community.arm.com/arm-community-blogs/b/graphics-gaming-and-vr-blog/posts/the-mali-gpu-an-abstract-machine-part-1---frame-pipelining)
 static uint32_t constexpr const INTERNAL_FRAME_THROTTLING_COUNT = 3U;
 
-extern uint32_t internal_align_up(uint32_t value, uint32_t alignment);
-
 // The unified facade for both the UI renderer and the scene renderer
 
 class brx_anari_pal_device final : public brx_anari_device
@@ -139,20 +137,26 @@ class brx_anari_pal_device final : public brx_anari_device
 #endif
 	uint32_t m_frame_throttling_index;
 
+	brx_pal_sampled_asset_image *m_lut_specular_hdr_fresnel_factors_asset_image;
+	brx_pal_sampled_asset_image *m_lut_specular_transfer_function_sh_coefficients_asset_image;
+
 	brx_pal_storage_asset_buffer *m_place_holder_asset_buffer;
 	brx_pal_sampled_asset_image *m_place_holder_asset_image;
 
 	mcrt_unordered_map<brx_anari_surface_group const *, mcrt_set<brx_anari_surface_group_instance const *>> m_world_surface_group_instances;
 
+	brx_anari_image *m_hdri_light_radiance;
+#ifndef NDEBUG
+	bool m_hdri_light_layout_lock;
+#endif
+	BRX_ANARI_HDRI_LIGHT_LAYOUT m_hdri_light_layout;
+	brx_anari_vec3 m_hdri_light_direction;
+	brx_anari_vec3 m_hdri_light_up;
 #ifndef NDEBUG
 	bool m_hdri_light_dirty_lock;
 #endif
 	bool m_hdri_light_dirty;
-	brx_anari_image *m_hdri_light_radiance;
-	BRX_ANARI_HDRI_LIGHT_LAYOUT m_hdri_light_layout;
-	brx_anari_vec3 m_hdri_light_direction;
-	brx_anari_vec3 m_hdri_light_up;
-	brx_pal_storage_intermediate_buffer *m_hdri_light_irradiance_coefficients;
+	brx_pal_storage_intermediate_buffer *m_hdri_light_environment_map_sh_coefficients;
 	brx_pal_descriptor_set *m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update;
 
 	brx_anari_vec3 m_camera_position;
@@ -178,6 +182,9 @@ class brx_anari_pal_device final : public brx_anari_device
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_medium_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_high_pipeline;
 	brx_pal_frame_buffer *m_voxel_cone_tracing_voxelization_frame_buffer;
+#ifndef NDEBUG
+	bool m_renderer_gi_quality_lock;
+#endif
 	BRX_ANARI_RENDERER_GI_QUALITY m_renderer_gi_quality;
 
 public:
@@ -186,28 +193,56 @@ public:
 	void init(void *wsi_connection);
 	void uninit();
 
-	inline brx_pal_uniform_upload_buffer *create_upload_buffer(uint32_t const size);
-	inline void destroy_upload_buffer(brx_pal_uniform_upload_buffer *const buffer);
-
-	brx_pal_storage_intermediate_buffer *create_intermediate_buffer(uint32_t const size);
-	void destroy_intermediate_buffer(brx_pal_storage_intermediate_buffer *const buffer);
+	void helper_destroy_upload_buffer(brx_pal_uniform_upload_buffer *const buffer);
+	void helper_destroy_intermediate_buffer(brx_pal_storage_intermediate_buffer *const buffer);
+	void helper_destroy_asset_buffer(brx_pal_storage_asset_buffer *const buffer);
+	void helper_destroy_asset_image(brx_pal_sampled_asset_image *const image);
+	void helper_destroy_descriptor_set(brx_pal_descriptor_set *descriptor_set);
 
 	brx_pal_storage_asset_buffer *internal_create_asset_buffer(void const *const data_base, uint32_t const data_size);
-	void internal_destroy_asset_buffer(brx_pal_storage_asset_buffer *const buffer);
+	void init_image(BRX_ANARI_IMAGE_FORMAT const format, void const *const pixel_data, uint32_t const width, uint32_t const height, brx_pal_sampled_asset_image **const out_asset_image);
 
-	brx_pal_sampled_asset_image *internal_create_asset_image(BRX_ANARI_IMAGE_FORMAT const format, void const *const pixel_data, uint32_t const width, uint32_t const height);
-	void internal_destroy_asset_image(brx_pal_sampled_asset_image *const image);
+	inline brx_pal_storage_intermediate_buffer *create_deforming_surface_intermediate_vertex_position_buffer(uint32_t vertex_count);
+	inline brx_pal_storage_intermediate_buffer *create_deforming_surface_intermediate_vertex_varying_buffer(uint32_t vertex_count);
 
+	inline brx_pal_uniform_upload_buffer *create_deforming_per_surface_group_update_set_uniform_buffer();
 	inline brx_pal_descriptor_set *create_deforming_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer);
 	inline brx_pal_descriptor_set *create_deforming_per_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const vertex_blending_buffer, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_position_buffers, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_varying_buffers, brx_pal_storage_buffer const *const vertex_position_buffer_instance, brx_pal_storage_buffer const *const vertex_varying_buffer_instance);
+
+	inline brx_pal_uniform_upload_buffer *create_forward_shading_per_surface_group_update_set_uniform_buffer();
 	inline brx_pal_descriptor_set *create_forward_shading_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer);
 	inline brx_pal_descriptor_set *create_forward_shading_per_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image);
-	void destroy_descriptor_set(brx_pal_descriptor_set *descriptor_set);
 
 	void release_image(brx_anari_pal_image *const image);
 	void release_surface_group(brx_anari_pal_surface_group *const surface_group);
 
 private:
+	uint32_t helper_compute_uniform_buffer_size(uint32_t buffer_size) const;
+	void *helper_compute_uniform_buffer_memory_address(uint32_t frame_throttling_index, brx_pal_uniform_upload_buffer const *uniform_upload_buffer, uint32_t buffer_size) const;
+	uint32_t helper_compute_uniform_buffer_dynamic_offset(uint32_t frame_throttling_index, uint32_t buffer_size) const;
+
+	template <typename T>
+	inline uint32_t helper_compute_uniform_buffer_size() const
+	{
+		return this->helper_compute_uniform_buffer_size(static_cast<uint32_t>(sizeof(T)));
+	}
+
+	template <typename T>
+	inline T *helper_compute_uniform_buffer_memory_address(uint32_t frame_throttling_index, brx_pal_uniform_upload_buffer const *uniform_upload_buffer) const
+	{
+		return static_cast<T *>(this->helper_compute_uniform_buffer_memory_address(frame_throttling_index, uniform_upload_buffer, static_cast<uint32_t>(sizeof(T))));
+	}
+
+	template <typename T>
+	inline uint32_t helper_compute_uniform_buffer_dynamic_offset(uint32_t frame_throttling_index) const
+	{
+		return this->helper_compute_uniform_buffer_dynamic_offset(frame_throttling_index, static_cast<uint32_t>(sizeof(T)));
+	}
+
+	void init_lut_resource();
+
+	void init_place_holder_resource();
+
 	brx_anari_image *new_image(BRX_ANARI_IMAGE_FORMAT format, void const *pixel_data, uint32_t width, uint32_t height) override;
 	void release_image(brx_anari_image *image) override;
 
@@ -264,9 +299,9 @@ private:
 	void hdri_light_create_per_environment_lighting_descriptor(brx_pal_sampled_image const *const radiance);
 	void hdri_light_destroy_per_environment_lighting_descriptor();
 	DirectX::XMFLOAT4X4 hdri_light_get_world_to_environment_map_transform();
-	void hdri_light_update_uniform_buffer(DirectX::XMFLOAT4X4 const &inverse_view_transform, DirectX::XMFLOAT4X4 const &inverse_projection_transform, DirectX::XMFLOAT4X4 const &world_to_environment_map_transform);
-	void hdri_light_render_sh_projection(brx_pal_graphics_command_buffer *graphics_command_buffer);
-	void hdri_light_render_skybox(brx_pal_graphics_command_buffer *graphics_command_buffer);
+	void hdri_light_update_uniform_buffer(uint32_t frame_throttling_index, DirectX::XMFLOAT4X4 const &inverse_view_transform, DirectX::XMFLOAT4X4 const &inverse_projection_transform, DirectX::XMFLOAT4X4 const &world_to_environment_map_transform);
+	void hdri_light_render_sh_projection(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_hdri_light_sh_dirty, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout);
+	void hdri_light_render_skybox(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout);
 
 	void voxel_cone_tracing_create_none_update_binding_resource();
 	void voxel_cone_tracing_destroy_none_update_binding_resource();
@@ -278,7 +313,7 @@ private:
 	DirectX::XMFLOAT3 voxel_cone_tracing_get_clipmap_center(DirectX::XMFLOAT3 const &in_clipmap_anchor);
 	DirectX::XMFLOAT4X4 voxel_cone_tracing_get_viewport_depth_direction_view_matrix(DirectX::XMFLOAT3 const &in_clipmap_center, uint32_t viewport_depth_direction_index);
 	DirectX::XMFLOAT4X4 voxel_cone_tracing_get_clipmap_stack_level_projection_matrix(uint32_t clipmap_stack_level_index);
-	void voxel_cone_tracing_render(brx_pal_graphics_command_buffer *graphics_command_buffer);
+	void voxel_cone_tracing_render(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_voxel_cone_tracing_dirty, BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
 };
 
 class brx_anari_pal_image final : public brx_anari_image

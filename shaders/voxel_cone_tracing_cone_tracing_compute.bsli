@@ -23,7 +23,7 @@
 #include "../../Voxel-Cone-Tracing/shaders/brx_voxel_cone_tracing_cone_tracing_compute.bsli"
 
 #include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
-#include "../../Environment-Lighting/shaders/brx_octahedral_mapping.bsli"
+#include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 
 brx_bool brx_vct_application_bridge_get_gbuffer_surface(in brx_int2 in_screen_space_coordinates, out brx_float3 out_surface_position_world_space, out brx_float3 out_surface_shading_normal_world_space, out brx_float3 out_surface_diffuse_color, out brx_float3 out_surface_specular_color, out brx_float out_surface_roughness)
 {

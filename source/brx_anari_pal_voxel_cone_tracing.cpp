@@ -266,6 +266,9 @@ void brx_anari_pal_device::voxel_cone_tracing_destroy_pipeline()
 void brx_anari_pal_device::renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY gi_quality)
 {
 #ifndef NDEBUG
+    assert(!this->m_renderer_gi_quality_lock);
+    this->m_renderer_gi_quality_lock = true;
+
     assert(!this->m_voxel_cone_tracing_dirty_lock);
     this->m_voxel_cone_tracing_dirty_lock = true;
 #endif
@@ -279,6 +282,8 @@ void brx_anari_pal_device::renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY
 
 #ifndef NDEBUG
     this->m_voxel_cone_tracing_dirty_lock = false;
+
+    this->m_renderer_gi_quality_lock = false;
 #endif
 }
 
@@ -307,20 +312,13 @@ DirectX::XMFLOAT4X4 brx_anari_pal_device::voxel_cone_tracing_get_clipmap_stack_l
     return brx_voxel_cone_tracing_voxelization_compute_clipmap_stack_level_projection_matrix(clipmap_stack_level_index);
 }
 
-void brx_anari_pal_device::voxel_cone_tracing_render(brx_pal_graphics_command_buffer *graphics_command_buffer)
+void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_voxel_cone_tracing_dirty, BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality)
 {
-    BRX_ANARI_RENDERER_GI_QUALITY const renderer_gi_quality = this->m_renderer_gi_quality;
-
     if ((BRX_ANARI_RENDERER_GI_QUALITY_LOW == renderer_gi_quality) || (BRX_ANARI_RENDERER_GI_QUALITY_MEDIUM == renderer_gi_quality) || (BRX_ANARI_RENDERER_GI_QUALITY_HIGH == renderer_gi_quality))
     {
         graphics_command_buffer->begin_debug_utils_label("Voxel Cone Tracing Pass");
 
-#ifndef NDEBUG
-        assert(!this->m_voxel_cone_tracing_dirty_lock);
-        this->m_voxel_cone_tracing_dirty_lock = true;
-#endif
-
-        if (this->m_voxel_cone_tracing_dirty)
+        if (inout_voxel_cone_tracing_dirty)
         {
             graphics_command_buffer->begin_debug_utils_label("Voxel Cone Tracing Zero Pass");
 
@@ -335,7 +333,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(brx_pal_graphics_command_bu
             {
                 brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
 
-                uint32_t const dynamic_offsets[] = {internal_align_up(static_cast<uint32_t>(sizeof(post_processing_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
                 graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
@@ -354,12 +352,8 @@ void brx_anari_pal_device::voxel_cone_tracing_render(brx_pal_graphics_command_bu
 
             graphics_command_buffer->end_debug_utils_label();
 
-            this->m_voxel_cone_tracing_dirty = false;
+            inout_voxel_cone_tracing_dirty = false;
         }
-
-#ifndef NDEBUG
-        this->m_voxel_cone_tracing_dirty_lock = false;
-#endif
 
         {
             brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination};
@@ -375,7 +369,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(brx_pal_graphics_command_bu
             {
                 brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
 
-                uint32_t const dynamic_offsets[] = {internal_align_up(static_cast<uint32_t>(sizeof(post_processing_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
                 graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
@@ -434,9 +428,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(brx_pal_graphics_command_bu
                                 surface_group_instance->get_forward_shading_per_surface_group_update_descriptor_set(),
                                 surface->get_deforming() ? surface_instance->get_forward_shading_per_surface_update_descriptor_set() : surface->get_forward_shading_per_surface_update_descriptor_set()};
 
-                            uint32_t const dynamic_offsets[] = {
-                                internal_align_up(static_cast<uint32_t>(sizeof(forward_shading_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index,
-                                internal_align_up(static_cast<uint32_t>(sizeof(forward_shading_per_surface_group_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                            uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_none_update_set_uniform_buffer_binding>(frame_throttling_index), this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_per_surface_group_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
                             graphics_command_buffer->bind_graphics_descriptor_sets(this->m_forward_shading_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
                         }
@@ -493,7 +485,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(brx_pal_graphics_command_bu
             {
                 brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
 
-                uint32_t const dynamic_offsets[] = {internal_align_up(static_cast<uint32_t>(sizeof(post_processing_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
                 graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }

@@ -122,18 +122,23 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_frame_throttling_index_lock(false),
 #endif
       m_frame_throttling_index(BRX_ANARI_UINT32_INDEX_INVALID),
+      m_lut_specular_hdr_fresnel_factors_asset_image(NULL),
+      m_lut_specular_transfer_function_sh_coefficients_asset_image(NULL),
       m_place_holder_asset_buffer(NULL),
       m_place_holder_asset_image(NULL),
       m_world_surface_group_instances{},
+      m_hdri_light_radiance(NULL),
+#ifndef NDEBUG
+      m_hdri_light_layout_lock(false),
+#endif
+      m_hdri_light_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED),
+      m_hdri_light_direction{1.0F, 0.0F, 0.0F},
+      m_hdri_light_up{0.0F, 0.0F, 1.0F},
 #ifndef NDEBUG
       m_hdri_light_dirty_lock(false),
 #endif
       m_hdri_light_dirty(true),
-      m_hdri_light_radiance(NULL),
-      m_hdri_light_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED),
-      m_hdri_light_direction{0.0F, 0.0F, 1.0F},
-      m_hdri_light_up{1.0F, 0.0F, 0.0F},
-      m_hdri_light_irradiance_coefficients(NULL),
+      m_hdri_light_environment_map_sh_coefficients(NULL),
       m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update(NULL),
 #ifndef NDEBUG
       m_voxel_cone_tracing_dirty_lock(false),
@@ -151,6 +156,9 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_voxel_cone_tracing_cone_tracing_medium_pipeline(NULL),
       m_voxel_cone_tracing_cone_tracing_high_pipeline(NULL),
       m_voxel_cone_tracing_voxelization_frame_buffer(NULL),
+#ifndef NDEBUG
+      m_renderer_gi_quality_lock(false),
+#endif
       m_renderer_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY_LOW)
 {
 }
@@ -226,13 +234,15 @@ brx_anari_pal_device::~brx_anari_pal_device()
         assert(NULL == this->m_graphics_command_buffers[frame_throttling_index]);
     }
     assert(BRX_ANARI_UINT32_INDEX_INVALID == this->m_frame_throttling_index);
+    assert(NULL == this->m_lut_specular_hdr_fresnel_factors_asset_image);
+    assert(NULL == this->m_lut_specular_transfer_function_sh_coefficients_asset_image);
     assert(NULL == this->m_place_holder_asset_buffer);
     assert(NULL == this->m_place_holder_asset_image);
     assert(this->m_world_surface_group_instances.empty());
     assert(this->m_world_surface_group_instances.empty());
     assert(NULL == this->m_hdri_light_radiance);
     assert(BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED == this->m_hdri_light_layout);
-    assert(NULL == this->m_hdri_light_irradiance_coefficients);
+    assert(NULL == this->m_hdri_light_environment_map_sh_coefficients);
     assert(NULL == this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update);
     assert(NULL == this->m_voxel_cone_tracing_clipmap_mask);
     assert(NULL == this->m_voxel_cone_tracing_clipmap_opacity);
@@ -262,6 +272,8 @@ void brx_anari_pal_device::init(void *wsi_connection)
     this->hdri_light_create_none_update_binding_resource();
 
     this->voxel_cone_tracing_create_none_update_binding_resource();
+
+    this->init_lut_resource();
 
     // Scene Renderer
     {
@@ -315,7 +327,9 @@ void brx_anari_pal_device::init(void *wsi_connection)
                     {2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {3U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
                     {4U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U},
-                    {5U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 1U}};
+                    {5U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 1U},
+                    {6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
                 forward_shading_descriptor_set_layout_none_update = this->m_device->create_descriptor_set_layout(sizeof(forward_shading_descriptor_set_layout_none_update_bindings) / sizeof(forward_shading_descriptor_set_layout_none_update_bindings[0]), forward_shading_descriptor_set_layout_none_update_bindings);
 
                 assert(NULL == this->m_forward_shading_descriptor_set_layout_per_surface_group_update);
@@ -340,7 +354,7 @@ void brx_anari_pal_device::init(void *wsi_connection)
             // Forward Shading None Update Uniform Buffer
             {
                 assert(NULL == this->m_forward_shading_none_update_set_uniform_buffer);
-                this->m_forward_shading_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(internal_align_up(static_cast<uint32_t>(sizeof(forward_shading_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * INTERNAL_FRAME_THROTTLING_COUNT);
+                this->m_forward_shading_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<forward_shading_none_update_set_uniform_buffer_binding>());
             }
 
             // Forward Shading None Update Descriptor
@@ -377,9 +391,19 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 }
 
                 {
-                    assert(NULL != this->m_hdri_light_irradiance_coefficients);
-                    brx_pal_read_only_storage_buffer const *buffers[] = {this->m_hdri_light_irradiance_coefficients->get_read_only_storage_buffer()};
+                    assert(NULL != this->m_hdri_light_environment_map_sh_coefficients);
+                    brx_pal_read_only_storage_buffer const *buffers[] = {this->m_hdri_light_environment_map_sh_coefficients->get_read_only_storage_buffer()};
                     this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 5U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 0U, sizeof(buffers) / sizeof(buffers[0]), NULL, NULL, buffers, NULL, NULL, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_hdr_fresnel_factors_asset_image->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_transfer_function_sh_coefficients_asset_image->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
             }
 
@@ -414,7 +438,7 @@ void brx_anari_pal_device::init(void *wsi_connection)
             {
                 assert(NULL == this->m_post_processing_none_update_set_uniform_buffer);
 
-                this->m_post_processing_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(internal_align_up(static_cast<uint32_t>(sizeof(post_processing_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * INTERNAL_FRAME_THROTTLING_COUNT);
+                this->m_post_processing_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<post_processing_none_update_set_uniform_buffer_binding>());
             }
 
             // Post Processing None Update Descriptor
@@ -650,21 +674,7 @@ void brx_anari_pal_device::init(void *wsi_connection)
     assert(BRX_ANARI_UINT32_INDEX_INVALID == this->m_frame_throttling_index);
     this->m_frame_throttling_index = 0U;
 
-    assert(NULL == this->m_place_holder_asset_buffer);
-    {
-        constexpr uint32_t const data_size = 1U;
-        static_assert(data_size < SURFACE_VERTEX_POSITION_BUFFER_STRIDE, "");
-        static_assert(data_size < SURFACE_VERTEX_VARYING_BUFFER_STRIDE, "");
-        static_assert(data_size < SURFACE_VERTEX_BLENDING_BUFFER_STRIDE, "");
-        mcrt_vector<uint8_t> const data(static_cast<size_t>(data_size));
-        this->m_place_holder_asset_buffer = this->internal_create_asset_buffer(data.data(), 1U);
-    }
-
-    assert(NULL == this->m_place_holder_asset_image);
-    {
-        mcrt_vector<uint32_t> const pixel_data(static_cast<size_t>(1U * 1U));
-        this->m_place_holder_asset_image = this->internal_create_asset_image(BRX_ANARI_IMAGE_FORMAT_R8G8B8A8_UNORM, pixel_data.data(), 1U, 1U);
-    }
+    this->init_place_holder_resource();
 
     assert(this->m_world_surface_group_instances.empty());
 
@@ -694,12 +704,20 @@ void brx_anari_pal_device::uninit()
 
     assert(this->m_world_surface_group_instances.empty());
 
+    assert(NULL != this->m_lut_specular_hdr_fresnel_factors_asset_image);
+    this->helper_destroy_asset_image(this->m_lut_specular_hdr_fresnel_factors_asset_image);
+    this->m_lut_specular_hdr_fresnel_factors_asset_image = NULL;
+
+    assert(NULL != this->m_lut_specular_transfer_function_sh_coefficients_asset_image);
+    this->helper_destroy_asset_image(this->m_lut_specular_transfer_function_sh_coefficients_asset_image);
+    this->m_lut_specular_transfer_function_sh_coefficients_asset_image = NULL;
+
     assert(NULL != this->m_place_holder_asset_buffer);
-    this->internal_destroy_asset_buffer(this->m_place_holder_asset_buffer);
+    this->helper_destroy_asset_buffer(this->m_place_holder_asset_buffer);
     this->m_place_holder_asset_buffer = NULL;
 
     assert(NULL != this->m_place_holder_asset_image);
-    this->internal_destroy_asset_image(this->m_place_holder_asset_image);
+    this->helper_destroy_asset_image(this->m_place_holder_asset_image);
     this->m_place_holder_asset_image = NULL;
 
     for (uint32_t frame_throttling_index = 0U; frame_throttling_index < INTERNAL_FRAME_THROTTLING_COUNT; ++frame_throttling_index)
@@ -920,24 +938,6 @@ void brx_anari_pal_device::uninit()
     assert(NULL != this->m_device);
     brx_pal_destroy_device(this->m_device);
     this->m_device = NULL;
-}
-
-void brx_anari_pal_device::destroy_descriptor_set(brx_pal_descriptor_set *descriptor_set)
-{
-#ifndef NDEBUG
-    assert(!this->m_frame_throttling_index_lock);
-    this->m_frame_throttling_index_lock = true;
-#endif
-
-    assert(NULL != descriptor_set);
-
-    uint32_t const previous_frame_throttling_index = ((this->m_frame_throttling_index >= 1U) ? this->m_frame_throttling_index : INTERNAL_FRAME_THROTTLING_COUNT) - 1U;
-
-    this->m_pending_destroy_descriptor_sets[previous_frame_throttling_index].push_back(descriptor_set);
-
-#ifndef NDEBUG
-    this->m_frame_throttling_index_lock = false;
-#endif
 }
 
 void brx_anari_pal_device::camera_set_position(brx_anari_vec3 position)
@@ -1338,6 +1338,23 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
     assert(NULL != this->m_swap_chain);
 
+#ifndef NDEBUG
+    assert(!this->m_frame_throttling_index_lock);
+    this->m_frame_throttling_index_lock = true;
+
+    assert(!this->m_hdri_light_layout_lock);
+    this->m_hdri_light_layout_lock = true;
+
+    assert(!this->m_renderer_gi_quality_lock);
+    this->m_renderer_gi_quality_lock = true;
+
+    assert(!this->m_hdri_light_dirty_lock);
+    this->m_hdri_light_dirty_lock = true;
+
+    assert(!this->m_voxel_cone_tracing_dirty_lock);
+    this->m_voxel_cone_tracing_dirty_lock = true;
+#endif
+
     this->m_device->wait_for_fence(this->m_fences[this->m_frame_throttling_index]);
 
     // Destroy Resources NOT Used By GPU
@@ -1440,10 +1457,10 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
         DirectX::XMFLOAT4X4 world_to_environment_map_transform = this->hdri_light_get_world_to_environment_map_transform();
 
-        this->hdri_light_update_uniform_buffer(camera_inverse_view_transform, camera_inverse_projection_transform, world_to_environment_map_transform);
+        this->hdri_light_update_uniform_buffer(this->m_frame_throttling_index, camera_inverse_view_transform, camera_inverse_projection_transform, world_to_environment_map_transform);
 
         // HDRI Light SH Projection
-        this->hdri_light_render_sh_projection(command_buffer);
+        this->hdri_light_render_sh_projection(this->m_frame_throttling_index, command_buffer, this->m_hdri_light_dirty, this->m_hdri_light_layout);
 
         // Deforming Pass
         {
@@ -1495,7 +1512,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                     // Update Uniform Buffer
                     if (deforming)
                     {
-                        deforming_per_surface_group_update_set_uniform_buffer_binding *const deforming_per_surface_group_update_set_uniform_buffer_destination = reinterpret_cast<deforming_per_surface_group_update_set_uniform_buffer_binding *>(reinterpret_cast<uintptr_t>(surface_group_instance->get_deforming_per_surface_group_update_set_uniform_buffer()->get_host_memory_range_base()) + internal_align_up(static_cast<uint32_t>(sizeof(deforming_per_surface_group_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index);
+                        deforming_per_surface_group_update_set_uniform_buffer_binding *const deforming_per_surface_group_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<deforming_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, surface_group_instance->get_deforming_per_surface_group_update_set_uniform_buffer());
                         static_assert(BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT == MORPH_TARGET_WEIGHT_COUNT, "");
                         static_assert(BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT <= DEFORMING_MAX_MORPH_TARGET_WEIGHT_COUNT, "");
                         for (uint32_t morph_target_name_index = 0U; morph_target_name_index < BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT; ++morph_target_name_index)
@@ -1572,8 +1589,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                         descriptor_sets[2U * surface_index],
                         descriptor_sets[2U * surface_index + 1U]};
 
-                    uint32_t const dynamic_offsets[] = {
-                        internal_align_up(static_cast<uint32_t>(sizeof(deforming_per_surface_group_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                    uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<deforming_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
 
                     command_buffer->bind_compute_descriptor_sets(this->m_deforming_pipeline_layout, sizeof(descritor_sets) / sizeof(descritor_sets[0]), descritor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
 
@@ -1595,7 +1611,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
         // Update Forward Shading Uniform Buffer
         {
-            forward_shading_none_update_set_uniform_buffer_binding *const forward_shading_none_update_set_uniform_buffer_destination = reinterpret_cast<forward_shading_none_update_set_uniform_buffer_binding *>(reinterpret_cast<uintptr_t>(this->m_forward_shading_none_update_set_uniform_buffer->get_host_memory_range_base()) + internal_align_up(static_cast<uint32_t>(sizeof(forward_shading_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index);
+            forward_shading_none_update_set_uniform_buffer_binding *const forward_shading_none_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<forward_shading_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, this->m_forward_shading_none_update_set_uniform_buffer);
             forward_shading_none_update_set_uniform_buffer_destination->g_view_transform = camera_view_transform;
             forward_shading_none_update_set_uniform_buffer_destination->g_inverse_view_transform = camera_inverse_view_transform;
             forward_shading_none_update_set_uniform_buffer_destination->g_projection_transform = camera_projection_transform;
@@ -1631,7 +1647,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
                     // Update Uniform Buffer
                     {
-                        forward_shading_per_surface_group_update_set_uniform_buffer_binding *const forward_shading_per_surface_group_update_set_uniform_buffer_destination = reinterpret_cast<forward_shading_per_surface_group_update_set_uniform_buffer_binding *>(reinterpret_cast<uintptr_t>(surface_group_instance->get_forward_shading_per_surface_group_update_set_uniform_buffer()->get_host_memory_range_base()) + internal_align_up(static_cast<uint32_t>(sizeof(forward_shading_per_surface_group_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index);
+                        forward_shading_per_surface_group_update_set_uniform_buffer_binding *const forward_shading_per_surface_group_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<forward_shading_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, surface_group_instance->get_forward_shading_per_surface_group_update_set_uniform_buffer());
 
                         DirectX::XMFLOAT4X4 model_transform;
                         {
@@ -1650,7 +1666,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
         // Update Post Processing Uniform Buffer
         {
-            post_processing_none_update_set_uniform_buffer_binding *const post_processing_none_update_set_uniform_buffer_destination = reinterpret_cast<post_processing_none_update_set_uniform_buffer_binding *>(reinterpret_cast<uintptr_t>(this->m_post_processing_none_update_set_uniform_buffer->get_host_memory_range_base()) + internal_align_up(static_cast<uint32_t>(sizeof(post_processing_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index);
+            post_processing_none_update_set_uniform_buffer_binding *const post_processing_none_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<post_processing_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, this->m_post_processing_none_update_set_uniform_buffer);
             post_processing_none_update_set_uniform_buffer_destination->g_inverse_view_transform = camera_inverse_view_transform;
             post_processing_none_update_set_uniform_buffer_destination->g_inverse_projection_transform = camera_inverse_projection_transform;
             post_processing_none_update_set_uniform_buffer_destination->g_clipmap_anchor = voxel_cone_tracing_clipmap_anchor;
@@ -1674,7 +1690,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
             command_buffer->set_scissor(0, 0, this->m_intermediate_width, this->m_intermediate_height);
 
             // HDRI Light Skybox
-            this->hdri_light_render_skybox(command_buffer);
+            this->hdri_light_render_skybox(this->m_frame_throttling_index, command_buffer, this->m_hdri_light_layout);
 
             // Forward Shading
             {
@@ -1708,9 +1724,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                                     surface_group_instance->get_forward_shading_per_surface_group_update_descriptor_set(),
                                     surface->get_deforming() ? surface_instance->get_forward_shading_per_surface_update_descriptor_set() : surface->get_forward_shading_per_surface_update_descriptor_set()};
 
-                                uint32_t const dynamic_offsets[] = {
-                                    internal_align_up(static_cast<uint32_t>(sizeof(forward_shading_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index,
-                                    internal_align_up(static_cast<uint32_t>(sizeof(forward_shading_per_surface_group_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index), this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
 
                                 command_buffer->bind_graphics_descriptor_sets(this->m_forward_shading_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
                             }
@@ -1727,7 +1741,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
         }
 
         // GI
-        this->voxel_cone_tracing_render(command_buffer);
+        this->voxel_cone_tracing_render(this->m_frame_throttling_index, command_buffer, this->m_voxel_cone_tracing_dirty, this->m_renderer_gi_quality);
 
         // Post Processing Pass
         {
@@ -1745,7 +1759,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
             {
                 brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
 
-                uint32_t const dynamic_offsets[] = {internal_align_up(static_cast<uint32_t>(sizeof(post_processing_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
 
                 command_buffer->bind_graphics_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
@@ -1837,32 +1851,16 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
     ++this->m_frame_throttling_index;
     this->m_frame_throttling_index %= INTERNAL_FRAME_THROTTLING_COUNT;
-}
 
-extern uint32_t internal_align_up(uint32_t value, uint32_t alignment)
-{
-    //
-    //  Copyright (c) 2005-2019 Intel Corporation
-    //
-    //  Licensed under the Apache License, Version 2.0 (the "License");
-    //  you may not use this file except in compliance with the License.
-    //  You may obtain a copy of the License at
-    //
-    //      http://www.apache.org/licenses/LICENSE-2.0
-    //
-    //  Unless required by applicable law or agreed to in writing, software
-    //  distributed under the License is distributed on an "AS IS" BASIS,
-    //  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    //  See the License for the specific language governing permissions and
-    //  limitations under the License.
-    //
+#ifndef NDEBUG
+    this->m_voxel_cone_tracing_dirty_lock = false;
 
-    // [alignUp](https://github.com/oneapi-src/oneTBB/blob/tbb_2019/src/tbbmalloc/shared_utils.h#L42)
+    this->m_hdri_light_dirty_lock = false;
 
-    assert(alignment != static_cast<uint32_t>(0U));
+    this->m_renderer_gi_quality_lock = false;
 
-    // power-of-2 alignment
-    assert((alignment & (alignment - static_cast<uint32_t>(1U))) == static_cast<uint32_t>(0U));
+    this->m_hdri_light_layout_lock = false;
 
-    return (((value - static_cast<uint32_t>(1U)) | (alignment - static_cast<uint32_t>(1U))) + static_cast<uint32_t>(1U));
+    this->m_frame_throttling_index_lock = false;
+#endif
 }

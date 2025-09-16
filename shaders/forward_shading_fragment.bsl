@@ -18,8 +18,9 @@
 #include "forward_shading_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_math_consts.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_brdf.bsli"
-#include "../../Environment-Lighting/shaders/brx_octahedral_mapping.bsli"
-#include "../../Environment-Lighting/shaders/brx_environment_lighting_sh_diffuse_radiance.bsli"
+#include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
+#include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_diffuse_radiance.bsli"
+#include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_specular_radiance.bsli"
 
 brx_root_signature(forward_shading_root_signature_macro, forward_shading_root_signature_name)
 brx_early_depth_stencil
@@ -327,19 +328,65 @@ brx_pixel_shader_parameter_end(main)
     brx_float3 ambient_radiance;
     brx_branch if ((ENVIRONMENT_MAP_LAYOUT_EQUIRECTANGULAR == g_environment_map_layout) || (ENVIRONMENT_MAP_LAYOUT_OCTAHEDRAL == g_environment_map_layout))
     {
-        brx_float3 sh_irradiance_coefficients[9];
-        for (brx_int sh_irradiance_coefficient_index = 0; sh_irradiance_coefficient_index < 9; ++sh_irradiance_coefficient_index)
+        brx_float3 environment_map_sh_coefficients[BRX_SH_COEFFICIENT_COUNT];
+        for (brx_int environment_map_sh_coefficient_index = 0; environment_map_sh_coefficient_index < BRX_SH_COEFFICIENT_COUNT; ++environment_map_sh_coefficient_index)
         {
-            sh_irradiance_coefficients[sh_irradiance_coefficient_index] = brx_uint_as_float(brx_byte_address_buffer_load3(t_environment_lighting_sh_irradiance_coefficients, (3 * (sh_irradiance_coefficient_index << 2))));
+            environment_map_sh_coefficients[environment_map_sh_coefficient_index] = brx_uint_as_float(brx_byte_address_buffer_load3(t_environment_map_sh_coefficients, (3 * (environment_map_sh_coefficient_index << 2))));
         }
+
+        brx_float3 outgoing_direction_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(-camera_ray_direction, 0.0)).xyz;
 
         brx_float3 shading_normal_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(surface_shading_normal_world_space, 0.0)).xyz;
 
-        brx_float3 environment_lighting_diffuse_radiance = brx_environment_lighting_sh_diffuse_radiance(surface_diffuse_color, surface_specular_color, shading_normal_environment_map_space, sh_irradiance_coefficients);
+        brx_float3 surface_diffuse_albedo = surface_diffuse_color;
 
-        // TODO: specular environment lighting
+        brx_float3 surface_specular_albedo;
+        brx_float non_rotation_transfer_function_lut_sh_coefficients[BRX_SH_PROJECTION_TRANSFER_FUNCTION_LUT_SH_COEFFICIENT_COUNT];
+        {
+            brx_float surface_alpha = brx_max(brx_float(BRX_TROWBRIDGE_REITZ_ALPHA_MINIMUM), surface_roughness * surface_roughness);
+            brx_float NdotV = brx_max(brx_float(BRX_TROWBRIDGE_REITZ_NDOTV_MINIMUM), brx_dot(shading_normal_environment_map_space, outgoing_direction_environment_map_space));
 
-        ambient_radiance = environment_lighting_diffuse_radiance;
+            brx_float2 raw_lut_uv = brx_float2(brx_max(0.0, 1.0 - NdotV), brx_max(0.0, 1.0 - surface_alpha));
+
+            {
+                // Remap: [0, 1] -> [0.5/size, 1.0 - 0.5/size]
+                // U3D: [Remap01ToHalfTexelCoord](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl#L661)
+                // UE4: [N/A](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/RectLight.ush#L450)
+                brx_int2 specular_hdr_fresnel_factors_lut_dimension = brx_texture_2d_get_dimension(t_lut_specular_hdr_fresnel_factors, 0);
+                brx_float2 specular_hdr_fresnel_factors_lut_uv = (brx_float2(0.5, 0.5) + brx_float2(specular_hdr_fresnel_factors_lut_dimension.x - 1, specular_hdr_fresnel_factors_lut_dimension.y - 1) * raw_lut_uv) / brx_float2(specular_hdr_fresnel_factors_lut_dimension.x, specular_hdr_fresnel_factors_lut_dimension.y);
+
+                brx_float2 fresnel_factor = brx_sample_level_2d(t_lut_specular_hdr_fresnel_factors, s_sampler, specular_hdr_fresnel_factors_lut_uv, 0.0).xy;
+                brx_float f0_factor = fresnel_factor.x;
+                brx_float f90_factor = fresnel_factor.y;
+
+                // UE4: [EnvBRDF](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L476)
+                brx_float3 f0 = surface_specular_color;
+                brx_float f90 = brx_clamp(50.0 * f0.g, 0.0, 1.0);
+
+                // UE4: [EnvBRDF](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L471)
+                // U3D: [GetPreIntegratedFGDGGXAndDisneyDiffuse](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.high-definition/Runtime/Material/PreIntegratedFGD/PreIntegratedFGD.hlsl#L8)
+                surface_specular_albedo = f0 * f0_factor + brx_float3(f90, f90, f90) * f90_factor;
+            }
+
+            {
+                // Remap: [0, 1] -> [0.5/size, 1.0 - 0.5/size]
+                // U3D: [Remap01ToHalfTexelCoord](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl#L661)
+                // UE4: [N/A](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/RectLight.ush#L450)
+                brx_int3 specular_transfer_function_sh_coefficients_lut_dimension = brx_texture_2d_array_get_dimension(t_lut_specular_transfer_function_sh_coefficients, 0);
+                brx_float2 specular_transfer_function_sh_coefficients_lut_uv = (brx_float2(0.5, 0.5) + brx_float2(specular_transfer_function_sh_coefficients_lut_dimension.x - 1, specular_transfer_function_sh_coefficients_lut_dimension.y - 1) * raw_lut_uv) / brx_float2(specular_transfer_function_sh_coefficients_lut_dimension.x, specular_transfer_function_sh_coefficients_lut_dimension.y);
+
+                brx_unroll for (brx_int transfer_function_lut_sh_coefficient_index = 0; transfer_function_lut_sh_coefficient_index < BRX_SH_PROJECTION_TRANSFER_FUNCTION_LUT_SH_COEFFICIENT_COUNT; ++transfer_function_lut_sh_coefficient_index)
+                {
+                    non_rotation_transfer_function_lut_sh_coefficients[transfer_function_lut_sh_coefficient_index] = brx_sample_level_2d_array(t_lut_specular_transfer_function_sh_coefficients, s_sampler, brx_float3(specular_transfer_function_sh_coefficients_lut_uv, brx_float(transfer_function_lut_sh_coefficient_index)), 0.0).x;
+                }
+            }
+        }
+
+        brx_float3 environment_lighting_diffuse_radiance = brx_sh_diffuse_radiance(surface_diffuse_albedo, shading_normal_environment_map_space, environment_map_sh_coefficients);
+
+        brx_float3 environment_lighting_specular_radiance = brx_sh_specular_radiance(surface_specular_albedo, outgoing_direction_environment_map_space, shading_normal_environment_map_space, non_rotation_transfer_function_lut_sh_coefficients, environment_map_sh_coefficients);
+
+        ambient_radiance = environment_lighting_diffuse_radiance + environment_lighting_specular_radiance;
     }
     else
     {

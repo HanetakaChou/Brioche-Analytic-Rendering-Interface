@@ -22,7 +22,7 @@
 
 #include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
 
-brx_read_write_byte_address_buffer(u_environment_lighting_sh_irradiance_coefficients, 0, 0);
+brx_read_write_byte_address_buffer(u_environment_map_sh_coefficients, 0, 0);
 
 brx_sampler_state(s_sampler, 0, 1);
 

@@ -51,16 +51,20 @@ brx_cbuffer(forward_shading_none_update_set_uniform_buffer_binding, 0, 4)
 
 };
 
-brx_read_only_byte_address_buffer(t_environment_lighting_sh_irradiance_coefficients, 0, 5);
+brx_read_only_byte_address_buffer(t_environment_map_sh_coefficients, 0, 5);
+
+brx_texture_2d(t_lut_specular_hdr_fresnel_factors, 0, 6);
+
+brx_texture_2d_array(t_lut_specular_transfer_function_sh_coefficients, 0, 7);
 
 brx_cbuffer(forward_shading_per_surface_group_update_set_uniform_buffer_binding, 1, 0)
 {
     brx_column_major brx_float4x4 g_model_transform;
 };
 
-brx_read_only_byte_address_buffer_array(t_surface_buffers, 2, 0, 4);
+brx_read_only_byte_address_buffer_table(t_surface_buffers, 2, 0, 4);
 
-brx_texture_2d_array(t_surface_images, 2, 4, 4);
+brx_texture_2d_table(t_surface_images, 2, 4, 4);
 
 #define forward_shading_root_signature_macro                                                            \
     brx_root_signature_root_parameter_begin(forward_shading_root_signature_name)                        \
@@ -70,6 +74,8 @@ brx_texture_2d_array(t_surface_images, 2, 4, 4);
     brx_root_signature_root_descriptor_table_sampler(0, 3, 1) brx_root_signature_root_parameter_split   \
     brx_root_signature_root_cbv(0, 4) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(0, 5, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 6, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 7, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \
@@ -83,6 +89,8 @@ brx_texture_2d_array(t_surface_images, 2, 4, 4);
     brx_root_signature_root_descriptor_table_sampler(0, 3, 1) brx_root_signature_root_parameter_split   \
     brx_root_signature_root_cbv(0, 4) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(0, 5, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 6, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 7, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \

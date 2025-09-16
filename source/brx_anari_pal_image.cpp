@@ -82,7 +82,7 @@ static inline bool internal_is_power_of_2(uint32_t width_or_height);
 static inline void internal_fit_power_of_2(uint32_t origin_width, uint32_t origin_height, uint32_t &target_width, uint32_t &target_height);
 static inline uint32_t internal_count_mips(uint32_t width, uint32_t height);
 
-brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(BRX_ANARI_IMAGE_FORMAT const origin_format, void const *const origin_pixel_data, uint32_t const origin_width, uint32_t const origin_height)
+void brx_anari_pal_device::init_image(BRX_ANARI_IMAGE_FORMAT const origin_format, void const *const origin_pixel_data, uint32_t const origin_width, uint32_t const origin_height, brx_pal_sampled_asset_image **const out_asset_image)
 {
     // TODO: merge submit and barrier
 
@@ -90,6 +90,8 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
     uint32_t zeroth_width;
     uint32_t zeroth_height;
     uint32_t mip_level_count;
+    constexpr uint32_t const array_layer_count = 1U;
+    uint32_t subresource_count;
     mcrt_vector<BRX_PAL_SAMPLED_ASSET_IMAGE_IMPORT_SUBRESOURCE_MEMCPY_DEST> subresource_memcpy_dests;
     brx_pal_staging_upload_buffer *image_staging_upload_buffer = NULL;
     {
@@ -101,13 +103,14 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
         mip_level_count = internal_count_mips(zeroth_width, zeroth_height);
         assert((mip_level_count >= 1U) && (mip_level_count <= k_max_image_mip_levels));
 
-        uint32_t const subresource_count = mip_level_count;
+        subresource_count = mip_level_count * array_layer_count;
+
         subresource_memcpy_dests.resize(subresource_count);
 
         uint32_t const staging_upload_buffer_offset_alignment = this->m_device->get_staging_upload_buffer_offset_alignment();
         uint32_t const staging_upload_buffer_row_pitch_alignment = this->m_device->get_staging_upload_buffer_row_pitch_alignment();
 
-        uint32_t const total_bytes = brx_pal_sampled_asset_image_import_calculate_subresource_memcpy_dests(format, zeroth_width, zeroth_height, 1U, mip_level_count, 1U, 0U, staging_upload_buffer_offset_alignment, staging_upload_buffer_row_pitch_alignment, subresource_count, &subresource_memcpy_dests[0]);
+        uint32_t const total_bytes = brx_pal_sampled_asset_image_import_calculate_subresource_memcpy_dests(format, zeroth_width, zeroth_height, 1U, mip_level_count, array_layer_count, 0U, staging_upload_buffer_offset_alignment, staging_upload_buffer_row_pitch_alignment, subresource_count, subresource_memcpy_dests.data());
 
         assert(NULL == image_staging_upload_buffer);
         image_staging_upload_buffer = this->m_device->create_staging_upload_buffer(total_bytes);
@@ -159,22 +162,22 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
 
             {
                 constexpr uint32_t const mip_level_index = 0U;
+                constexpr uint32_t const array_layer_index = 0U;
 
                 uint32_t const input_row_count = height;
                 uint32_t const input_row_size = static_cast<uint32_t>(k_albedo_image_channel_size) * static_cast<uint32_t>(k_albedo_image_num_channels) * width;
                 uint32_t const input_row_pitch = input_row_size;
 
-                assert(input_row_count == subresource_memcpy_dests[mip_level_index].output_row_count);
-                assert(input_row_size == subresource_memcpy_dests[mip_level_index].output_row_size);
-                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[mip_level_index].output_row_size);
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, mip_level_count, array_layer_count);
+                assert(input_row_count == subresource_memcpy_dests[subresource_index].output_row_count);
+                assert(input_row_size == subresource_memcpy_dests[subresource_index].output_row_size);
+                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[subresource_index].output_row_size);
+                assert(1U == subresource_memcpy_dests[subresource_index].output_slice_count);
 
-                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, 0U, 0U, mip_level_count, 1U);
-                assert(1U == subresource_memcpy_dests[mip_level_index].output_slice_count);
-
-                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[mip_level_index].output_row_count); ++row_index)
+                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[subresource_index].output_row_count); ++row_index)
                 {
                     void *const memory_copy_destination = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(image_staging_upload_buffer->get_host_memory_range_base()) + (subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset + subresource_memcpy_dests[subresource_index].output_row_pitch * row_index));
-                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + input_row_pitch * row_index);
+                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + (input_row_pitch * input_row_count) * array_layer_index + input_row_pitch * row_index);
                     std::memcpy(memory_copy_destination, memory_copy_source, memory_copy_count);
                 }
             }
@@ -218,21 +221,22 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
             }
 
             {
+                constexpr uint32_t const array_layer_index = 0U;
+
                 uint32_t const input_row_count = height;
                 uint32_t const input_row_size = static_cast<uint32_t>(k_albedo_image_channel_size) * static_cast<uint32_t>(k_albedo_image_num_channels) * width;
                 uint32_t const input_row_pitch = input_row_size;
 
-                assert(input_row_count == subresource_memcpy_dests[mip_level_index].output_row_count);
-                assert(input_row_size == subresource_memcpy_dests[mip_level_index].output_row_size);
-                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[mip_level_index].output_row_size);
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, mip_level_count, array_layer_count);
+                assert(input_row_count == subresource_memcpy_dests[subresource_index].output_row_count);
+                assert(input_row_size == subresource_memcpy_dests[subresource_index].output_row_size);
+                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[subresource_index].output_row_size);
+                assert(1U == subresource_memcpy_dests[subresource_index].output_slice_count);
 
-                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, 0U, 0U, mip_level_count, 1U);
-                assert(1U == subresource_memcpy_dests[mip_level_index].output_slice_count);
-
-                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[mip_level_index].output_row_count); ++row_index)
+                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[subresource_index].output_row_count); ++row_index)
                 {
                     void *const memory_copy_destination = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(image_staging_upload_buffer->get_host_memory_range_base()) + (subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset + subresource_memcpy_dests[subresource_index].output_row_pitch * row_index));
-                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + input_row_pitch * row_index);
+                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + (input_row_pitch * input_row_count) * array_layer_index + input_row_pitch * row_index);
                     std::memcpy(memory_copy_destination, memory_copy_source, memory_copy_count);
                 }
             }
@@ -286,22 +290,22 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
 
             {
                 constexpr uint32_t const mip_level_index = 0U;
+                constexpr uint32_t const array_layer_index = 0U;
 
                 uint32_t const input_row_count = height;
                 uint32_t const input_row_size = static_cast<uint32_t>(k_illumiant_image_channel_size) * static_cast<uint32_t>(k_illumiant_image_num_channels) * width;
                 uint32_t const input_row_pitch = input_row_size;
 
-                assert(input_row_count == subresource_memcpy_dests[mip_level_index].output_row_count);
-                assert(input_row_size == subresource_memcpy_dests[mip_level_index].output_row_size);
-                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[mip_level_index].output_row_size);
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, mip_level_count, array_layer_count);
+                assert(input_row_count == subresource_memcpy_dests[subresource_index].output_row_count);
+                assert(input_row_size == subresource_memcpy_dests[subresource_index].output_row_size);
+                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[subresource_index].output_row_size);
+                assert(1U == subresource_memcpy_dests[subresource_index].output_slice_count);
 
-                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, 0U, 0U, mip_level_count, 1U);
-                assert(1U == subresource_memcpy_dests[mip_level_index].output_slice_count);
-
-                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[mip_level_index].output_row_count); ++row_index)
+                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[subresource_index].output_row_count); ++row_index)
                 {
                     void *const memory_copy_destination = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(image_staging_upload_buffer->get_host_memory_range_base()) + (subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset + subresource_memcpy_dests[subresource_index].output_row_pitch * row_index));
-                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + input_row_pitch * row_index);
+                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + (input_row_pitch * input_row_count) * array_layer_index + input_row_pitch * row_index);
                     std::memcpy(memory_copy_destination, memory_copy_source, memory_copy_count);
                 }
             }
@@ -345,21 +349,22 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
             }
 
             {
+                constexpr uint32_t const array_layer_index = 0U;
+
                 uint32_t const input_row_count = height;
                 uint32_t const input_row_size = static_cast<uint32_t>(k_illumiant_image_channel_size) * static_cast<uint32_t>(k_illumiant_image_num_channels) * width;
                 uint32_t const input_row_pitch = input_row_size;
 
-                assert(input_row_count == subresource_memcpy_dests[mip_level_index].output_row_count);
-                assert(input_row_size == subresource_memcpy_dests[mip_level_index].output_row_size);
-                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[mip_level_index].output_row_size);
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, mip_level_count, array_layer_count);
+                assert(input_row_count == subresource_memcpy_dests[subresource_index].output_row_count);
+                assert(input_row_size == subresource_memcpy_dests[subresource_index].output_row_size);
+                size_t const memory_copy_count = std::min(input_row_size, subresource_memcpy_dests[subresource_index].output_row_size);
+                assert(1U == subresource_memcpy_dests[subresource_index].output_slice_count);
 
-                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, 0U, 0U, mip_level_count, 1U);
-                assert(1U == subresource_memcpy_dests[mip_level_index].output_slice_count);
-
-                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[mip_level_index].output_row_count); ++row_index)
+                for (uint32_t row_index = 0U; (row_index < input_row_count) && (row_index < subresource_memcpy_dests[subresource_index].output_row_count); ++row_index)
                 {
                     void *const memory_copy_destination = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(image_staging_upload_buffer->get_host_memory_range_base()) + (subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset + subresource_memcpy_dests[subresource_index].output_row_pitch * row_index));
-                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + input_row_pitch * row_index);
+                    void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(pixel_data.data()) + (input_row_pitch * input_row_count) * array_layer_index + input_row_pitch * row_index);
                     std::memcpy(memory_copy_destination, memory_copy_source, memory_copy_count);
                 }
             }
@@ -370,7 +375,7 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
         assert(false);
     }
 
-    brx_pal_sampled_asset_image *const destination_asset_image = this->m_device->create_sampled_asset_image(format, zeroth_width, zeroth_height, mip_level_count);
+    brx_pal_sampled_asset_image *const destination_asset_image = this->m_device->create_sampled_asset_image(format, zeroth_width, zeroth_height, false, array_layer_count, mip_level_count);
     {
         brx_pal_upload_command_buffer *const upload_command_buffer = this->m_device->create_upload_command_buffer();
 
@@ -390,14 +395,31 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
 
         graphics_command_buffer->begin();
 
-        mcrt_vector<BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE> uploaded_asset_image_subresources(static_cast<size_t>(mip_level_count));
+        mcrt_vector<BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE> uploaded_asset_image_subresources(static_cast<size_t>(subresource_count));
 
-        for (uint32_t mip_level_index = 0U; mip_level_index < mip_level_count; ++mip_level_index)
+        for (uint32_t array_layer_index = 0U; array_layer_index < array_layer_count; ++array_layer_index)
         {
-            upload_command_buffer->upload_from_staging_upload_buffer_to_sampled_asset_image(destination_asset_image, format, zeroth_width, zeroth_height, mip_level_index, image_staging_upload_buffer, subresource_memcpy_dests[mip_level_index].staging_upload_buffer_offset, subresource_memcpy_dests[mip_level_index].output_row_pitch, subresource_memcpy_dests[mip_level_index].output_row_count);
+            for (uint32_t mip_level_index = 0U; mip_level_index < mip_level_count; ++mip_level_index)
+            {
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, mip_level_count, array_layer_count);
 
-            uploaded_asset_image_subresources[mip_level_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{destination_asset_image, mip_level_index};
+                uploaded_asset_image_subresources[subresource_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{destination_asset_image, mip_level_index, array_layer_index};
+            }
         }
+
+        upload_command_buffer->asset_resource_load_dont_care(0U, NULL, static_cast<uint32_t>(uploaded_asset_image_subresources.size()), uploaded_asset_image_subresources.data());
+
+        for (uint32_t array_layer_index = 0U; array_layer_index < array_layer_count; ++array_layer_index)
+        {
+            for (uint32_t mip_level_index = 0U; mip_level_index < mip_level_count; ++mip_level_index)
+            {
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, mip_level_count, array_layer_count);
+
+                upload_command_buffer->upload_from_staging_upload_buffer_to_sampled_asset_image(&uploaded_asset_image_subresources[subresource_index], format, zeroth_width, zeroth_height, image_staging_upload_buffer, subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset, subresource_memcpy_dests[subresource_index].output_row_pitch, subresource_memcpy_dests[subresource_index].output_row_count);
+            }
+        }
+
+        upload_command_buffer->asset_resource_store(0U, NULL, static_cast<uint32_t>(uploaded_asset_image_subresources.size()), uploaded_asset_image_subresources.data());
 
         upload_command_buffer->release(0U, NULL, static_cast<uint32_t>(uploaded_asset_image_subresources.size()), uploaded_asset_image_subresources.data(), 0U, NULL);
 
@@ -430,25 +452,7 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
     this->m_device->destroy_staging_upload_buffer(image_staging_upload_buffer);
     image_staging_upload_buffer = NULL;
 
-    return destination_asset_image;
-}
-
-void brx_anari_pal_device::internal_destroy_asset_image(brx_pal_sampled_asset_image *const image)
-{
-#ifndef NDEBUG
-    assert(!this->m_frame_throttling_index_lock);
-    this->m_frame_throttling_index_lock = true;
-#endif
-
-    assert(NULL != image);
-
-    uint32_t const previous_frame_throttling_index = ((this->m_frame_throttling_index >= 1U) ? this->m_frame_throttling_index : INTERNAL_FRAME_THROTTLING_COUNT) - 1U;
-
-    this->m_pending_destroy_sampled_asset_images[previous_frame_throttling_index].push_back(image);
-
-#ifndef NDEBUG
-    this->m_frame_throttling_index_lock = false;
-#endif
+    (*out_asset_image) = destination_asset_image;
 }
 
 brx_anari_image *brx_anari_pal_device::new_image(BRX_ANARI_IMAGE_FORMAT format, void const *pixel_data, uint32_t width, uint32_t height)
@@ -498,7 +502,7 @@ inline void brx_anari_pal_image::init(brx_anari_pal_device *device, BRX_ANARI_IM
     this->m_ref_count = 1U;
 
     assert(NULL == this->m_image);
-    this->m_image = device->internal_create_asset_image(format, pixel_data, width, height);
+    device->init_image(format, pixel_data, width, height, &this->m_image);
 
     assert(0U == this->m_width);
     this->m_width = width;
@@ -512,7 +516,7 @@ inline void brx_anari_pal_image::uninit(brx_anari_pal_device *device)
     assert(0U == this->m_ref_count);
 
     assert(NULL != this->m_image);
-    device->internal_destroy_asset_image(this->m_image);
+    device->helper_destroy_asset_image(this->m_image);
     this->m_image = NULL;
 }
 

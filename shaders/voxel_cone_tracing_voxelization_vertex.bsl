@@ -20,7 +20,7 @@
 
 #include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
-#include "../../Environment-Lighting/shaders/brx_octahedral_mapping.bsli"
+#include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 
 void brx_vct_application_bridge_get_triangle_vertices(in brx_uint in_triangle_index, out brx_float3 out_triangle_vertex_position_world_space_a, out brx_float3 out_triangle_vertex_position_world_space_b, out brx_float3 out_triangle_vertex_position_world_space_c)
 {

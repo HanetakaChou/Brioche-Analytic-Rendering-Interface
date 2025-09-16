@@ -32,55 +32,7 @@
 #include "../shaders/deforming_resource_binding.bsli"
 #include "../shaders/forward_shading_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/include/brx_packed_vector.h"
-#include "../../Environment-Lighting/include/brx_octahedral_mapping.h"
-
-inline brx_pal_uniform_upload_buffer *brx_anari_pal_device::create_upload_buffer(uint32_t const size)
-{
-    assert(this->m_device->get_uniform_upload_buffer_offset_alignment() == this->m_uniform_upload_buffer_offset_alignment);
-    brx_pal_uniform_upload_buffer *const buffer = this->m_device->create_uniform_upload_buffer(internal_align_up(size, this->m_uniform_upload_buffer_offset_alignment) * INTERNAL_FRAME_THROTTLING_COUNT);
-    return buffer;
-}
-
-inline void brx_anari_pal_device::destroy_upload_buffer(brx_pal_uniform_upload_buffer *const buffer)
-{
-#ifndef NDEBUG
-    assert(!this->m_frame_throttling_index_lock);
-    this->m_frame_throttling_index_lock = true;
-#endif
-
-    assert(NULL != buffer);
-
-    uint32_t const previous_frame_throttling_index = ((this->m_frame_throttling_index >= 1U) ? this->m_frame_throttling_index : INTERNAL_FRAME_THROTTLING_COUNT) - 1U;
-
-    this->m_pending_destroy_uniform_upload_buffers[previous_frame_throttling_index].push_back(buffer);
-
-#ifndef NDEBUG
-    this->m_frame_throttling_index_lock = false;
-#endif
-}
-
-brx_pal_storage_intermediate_buffer *brx_anari_pal_device::create_intermediate_buffer(uint32_t const size)
-{
-    return this->m_device->create_storage_intermediate_buffer(size);
-}
-
-void brx_anari_pal_device::destroy_intermediate_buffer(brx_pal_storage_intermediate_buffer *const buffer)
-{
-#ifndef NDEBUG
-    assert(!this->m_frame_throttling_index_lock);
-    this->m_frame_throttling_index_lock = true;
-#endif
-
-    assert(NULL != buffer);
-
-    uint32_t const previous_frame_throttling_index = ((this->m_frame_throttling_index >= 1U) ? this->m_frame_throttling_index : INTERNAL_FRAME_THROTTLING_COUNT) - 1U;
-
-    this->m_pending_destroy_storage_intermediate_buffers[previous_frame_throttling_index].push_back(buffer);
-
-#ifndef NDEBUG
-    this->m_frame_throttling_index_lock = false;
-#endif
-}
+#include "../../Brioche-Shader-Language/include/brx_octahedral_mapping.h"
 
 brx_pal_storage_asset_buffer *brx_anari_pal_device::internal_create_asset_buffer(void const *const data_base, uint32_t const data_size)
 {
@@ -114,7 +66,11 @@ brx_pal_storage_asset_buffer *brx_anari_pal_device::internal_create_asset_buffer
 
         graphics_command_buffer->begin();
 
+        upload_command_buffer->asset_resource_load_dont_care(1U, &destination_asset_buffer, 0U, NULL);
+
         upload_command_buffer->upload_from_staging_upload_buffer_to_storage_asset_buffer(destination_asset_buffer, 0U, buffer_staging_upload_buffer, 0U, data_size);
+
+        upload_command_buffer->asset_resource_store(1U, &destination_asset_buffer, 0U, NULL);
 
         upload_command_buffer->release(1U, &destination_asset_buffer, 0U, NULL, 0U, NULL);
 
@@ -150,22 +106,19 @@ brx_pal_storage_asset_buffer *brx_anari_pal_device::internal_create_asset_buffer
     return destination_asset_buffer;
 }
 
-void brx_anari_pal_device::internal_destroy_asset_buffer(brx_pal_storage_asset_buffer *const buffer)
+inline brx_pal_storage_intermediate_buffer *brx_anari_pal_device::create_deforming_surface_intermediate_vertex_position_buffer(uint32_t vertex_count)
 {
-#ifndef NDEBUG
-    assert(!this->m_frame_throttling_index_lock);
-    this->m_frame_throttling_index_lock = true;
-#endif
+    return this->m_device->create_storage_intermediate_buffer(sizeof(surface_vertex_position_buffer_element) * vertex_count);
+}
 
-    assert(NULL != buffer);
+inline brx_pal_storage_intermediate_buffer *brx_anari_pal_device::create_deforming_surface_intermediate_vertex_varying_buffer(uint32_t vertex_count)
+{
+    return this->m_device->create_storage_intermediate_buffer(sizeof(surface_vertex_varying_buffer_element) * vertex_count);
+}
 
-    uint32_t const previous_frame_throttling_index = ((this->m_frame_throttling_index >= 1U) ? this->m_frame_throttling_index : INTERNAL_FRAME_THROTTLING_COUNT) - 1U;
-
-    this->m_pending_destroy_storage_asset_buffers[previous_frame_throttling_index].push_back(buffer);
-
-#ifndef NDEBUG
-    this->m_frame_throttling_index_lock = false;
-#endif
+inline brx_pal_uniform_upload_buffer *brx_anari_pal_device::create_deforming_per_surface_group_update_set_uniform_buffer()
+{
+    return this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<deforming_per_surface_group_update_set_uniform_buffer_binding>());
 }
 
 inline brx_pal_descriptor_set *brx_anari_pal_device::create_deforming_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer)
@@ -207,6 +160,11 @@ inline brx_pal_descriptor_set *brx_anari_pal_device::create_deforming_per_surfac
     this->m_device->write_descriptor_set(descriptor_set, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0U, sizeof(surface_instance_buffers) / sizeof(surface_instance_buffers[0]), NULL, NULL, NULL, surface_instance_buffers, NULL, NULL, NULL, NULL);
 
     return descriptor_set;
+}
+
+inline brx_pal_uniform_upload_buffer *brx_anari_pal_device::create_forward_shading_per_surface_group_update_set_uniform_buffer()
+{
+    return this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<forward_shading_per_surface_group_update_set_uniform_buffer_binding>());
 }
 
 inline brx_pal_descriptor_set *brx_anari_pal_device::create_forward_shading_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer)
@@ -667,7 +625,7 @@ inline void brx_anari_pal_surface::uninit(brx_anari_pal_device *device)
         else
         {
             assert(NULL != this->m_forward_shading_descriptor_set_per_surface_update);
-            device->destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_update);
+            device->helper_destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_update);
             this->m_forward_shading_descriptor_set_per_surface_update = NULL;
         }
     }
@@ -675,7 +633,7 @@ inline void brx_anari_pal_surface::uninit(brx_anari_pal_device *device)
     // Auxiliary Buffer
     {
         assert(NULL != this->m_auxiliary_buffer);
-        device->internal_destroy_asset_buffer(this->m_auxiliary_buffer);
+        device->helper_destroy_asset_buffer(this->m_auxiliary_buffer);
         this->m_auxiliary_buffer = NULL;
     }
 
@@ -710,7 +668,7 @@ inline void brx_anari_pal_surface::uninit(brx_anari_pal_device *device)
     // Index Buffer
     {
         assert(NULL != this->m_index_buffer);
-        device->internal_destroy_asset_buffer(this->m_index_buffer);
+        device->helper_destroy_asset_buffer(this->m_index_buffer);
         this->m_index_buffer = NULL;
     }
 
@@ -725,14 +683,14 @@ inline void brx_anari_pal_surface::uninit(brx_anari_pal_device *device)
         // Vertex Position Buffer
         if (NULL != this->m_morph_targets_vertex_position_buffers[morph_target_name_index])
         {
-            device->internal_destroy_asset_buffer(this->m_morph_targets_vertex_position_buffers[morph_target_name_index]);
+            device->helper_destroy_asset_buffer(this->m_morph_targets_vertex_position_buffers[morph_target_name_index]);
             this->m_morph_targets_vertex_position_buffers[morph_target_name_index] = NULL;
         }
 
         // Vertex Varying Buffer
         if (NULL != this->m_morph_targets_vertex_varying_buffers[morph_target_name_index])
         {
-            device->internal_destroy_asset_buffer(this->m_morph_targets_vertex_varying_buffers[morph_target_name_index]);
+            device->helper_destroy_asset_buffer(this->m_morph_targets_vertex_varying_buffers[morph_target_name_index]);
             this->m_morph_targets_vertex_varying_buffers[morph_target_name_index] = NULL;
         }
     }
@@ -740,14 +698,14 @@ inline void brx_anari_pal_surface::uninit(brx_anari_pal_device *device)
     // Vertex Position Buffer
     {
         assert(NULL != this->m_vertex_position_buffer);
-        device->internal_destroy_asset_buffer(this->m_vertex_position_buffer);
+        device->helper_destroy_asset_buffer(this->m_vertex_position_buffer);
         this->m_vertex_position_buffer = NULL;
     }
 
     // Vertex Varying Buffer
     {
         assert(NULL != this->m_vertex_varying_buffer);
-        device->internal_destroy_asset_buffer(this->m_vertex_varying_buffer);
+        device->helper_destroy_asset_buffer(this->m_vertex_varying_buffer);
         this->m_vertex_varying_buffer = NULL;
     }
 
@@ -755,7 +713,7 @@ inline void brx_anari_pal_surface::uninit(brx_anari_pal_device *device)
     {
         if (NULL != this->m_vertex_blending_buffer)
         {
-            device->internal_destroy_asset_buffer(this->m_vertex_blending_buffer);
+            device->helper_destroy_asset_buffer(this->m_vertex_blending_buffer);
             this->m_vertex_blending_buffer = NULL;
         }
     }
@@ -948,10 +906,10 @@ inline void brx_anari_pal_surface_instance::init(brx_anari_pal_device *device, b
         uint32_t const vertex_count = surface->get_vertex_count();
 
         assert(NULL == this->m_vertex_position_buffer);
-        this->m_vertex_position_buffer = device->create_intermediate_buffer(sizeof(surface_vertex_position_buffer_element) * vertex_count);
+        this->m_vertex_position_buffer = device->create_deforming_surface_intermediate_vertex_position_buffer(vertex_count);
 
         assert(NULL == this->m_vertex_varying_buffer);
-        this->m_vertex_varying_buffer = device->create_intermediate_buffer(sizeof(surface_vertex_varying_buffer_element) * vertex_count);
+        this->m_vertex_varying_buffer = device->create_deforming_surface_intermediate_vertex_varying_buffer(vertex_count);
 
         assert(NULL == this->m_deforming_descriptor_set_per_surface_update);
         assert(NULL != surface->get_vertex_position_buffer());
@@ -994,19 +952,19 @@ inline void brx_anari_pal_surface_instance::uninit(brx_anari_pal_device *device,
     if (surface->get_deforming())
     {
         assert(NULL != this->m_deforming_descriptor_set_per_surface_update);
-        device->destroy_descriptor_set(this->m_deforming_descriptor_set_per_surface_update);
+        device->helper_destroy_descriptor_set(this->m_deforming_descriptor_set_per_surface_update);
         this->m_deforming_descriptor_set_per_surface_update = NULL;
 
         assert(NULL != this->m_forward_shading_descriptor_set_per_surface_update);
-        device->destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_update);
+        device->helper_destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_update);
         this->m_forward_shading_descriptor_set_per_surface_update = NULL;
 
         assert(NULL != this->m_vertex_position_buffer);
-        device->destroy_intermediate_buffer(this->m_vertex_position_buffer);
+        device->helper_destroy_intermediate_buffer(this->m_vertex_position_buffer);
         this->m_vertex_position_buffer = NULL;
 
         assert(NULL != this->m_vertex_varying_buffer);
-        device->destroy_intermediate_buffer(this->m_vertex_varying_buffer);
+        device->helper_destroy_intermediate_buffer(this->m_vertex_varying_buffer);
         this->m_vertex_varying_buffer = NULL;
     }
     else
@@ -1096,7 +1054,7 @@ inline void brx_anari_pal_surface_group_instance::init(brx_anari_pal_device *dev
     if (deforming)
     {
         assert(NULL == this->m_deforming_per_surface_group_update_set_uniform_buffer);
-        this->m_deforming_per_surface_group_update_set_uniform_buffer = device->create_upload_buffer(sizeof(deforming_per_surface_group_update_set_uniform_buffer_binding));
+        this->m_deforming_per_surface_group_update_set_uniform_buffer = device->create_deforming_per_surface_group_update_set_uniform_buffer();
 
         assert(NULL == this->m_deforming_descriptor_set_per_surface_group_update);
         this->m_deforming_descriptor_set_per_surface_group_update = device->create_deforming_per_surface_group_update_descriptor_set(this->m_deforming_per_surface_group_update_set_uniform_buffer);
@@ -1108,7 +1066,7 @@ inline void brx_anari_pal_surface_group_instance::init(brx_anari_pal_device *dev
     }
 
     assert(NULL == this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
-    this->m_forward_shading_per_surface_group_update_set_uniform_buffer = device->create_upload_buffer(sizeof(forward_shading_per_surface_group_update_set_uniform_buffer_binding));
+    this->m_forward_shading_per_surface_group_update_set_uniform_buffer = device->create_forward_shading_per_surface_group_update_set_uniform_buffer();
 
     assert(NULL == this->m_forward_shading_descriptor_set_per_surface_group_update);
     this->m_forward_shading_descriptor_set_per_surface_group_update = device->create_forward_shading_per_surface_group_update_descriptor_set(this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
@@ -1133,11 +1091,11 @@ inline void brx_anari_pal_surface_group_instance::uninit(brx_anari_pal_device *d
     if (deforming)
     {
         assert(NULL != this->m_deforming_descriptor_set_per_surface_group_update);
-        device->destroy_descriptor_set(this->m_deforming_descriptor_set_per_surface_group_update);
+        device->helper_destroy_descriptor_set(this->m_deforming_descriptor_set_per_surface_group_update);
         this->m_deforming_descriptor_set_per_surface_group_update = NULL;
 
         assert(NULL != this->m_deforming_per_surface_group_update_set_uniform_buffer);
-        device->destroy_upload_buffer(this->m_deforming_per_surface_group_update_set_uniform_buffer);
+        device->helper_destroy_upload_buffer(this->m_deforming_per_surface_group_update_set_uniform_buffer);
         this->m_deforming_per_surface_group_update_set_uniform_buffer = NULL;
     }
     else
@@ -1147,11 +1105,11 @@ inline void brx_anari_pal_surface_group_instance::uninit(brx_anari_pal_device *d
     }
 
     assert(NULL != this->m_forward_shading_descriptor_set_per_surface_group_update);
-    device->destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_group_update);
+    device->helper_destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_group_update);
     this->m_forward_shading_descriptor_set_per_surface_group_update = NULL;
 
     assert(NULL != this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
-    device->destroy_upload_buffer(this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
+    device->helper_destroy_upload_buffer(this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
     this->m_forward_shading_per_surface_group_update_set_uniform_buffer = NULL;
 
     assert(NULL != this->m_surface_group);

@@ -26,8 +26,8 @@
 #endif
 
 #include "environment_lighting_resource_binding.bsli"
-#include "../../Environment-Lighting/shaders/brx_equirectangular_mapping.bsli"
-#include "../../Environment-Lighting/shaders/brx_octahedral_mapping.bsli"
+#include "../../Brioche-Shader-Language/shaders/brx_equirectangular_mapping.bsli"
+#include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 
 brx_root_signature(environment_lighting_skybox_root_signature_macro, environment_lighting_skybox_root_signature_name)
 brx_early_depth_stencil

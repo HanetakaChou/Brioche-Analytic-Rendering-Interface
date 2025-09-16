@@ -186,6 +186,7 @@
     <ClCompile Include="..\source\brx_anari_pal_device.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_hdri_light.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_image.cpp" />
+    <ClCompile Include="..\source\brx_anari_pal_resource.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_surface.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_voxel_cone_tracing.cpp" />
     <ClCompile Include="dllmain.cpp" />

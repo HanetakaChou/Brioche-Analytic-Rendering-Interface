@@ -22,18 +22,18 @@
 
 void brx_anari_pal_device::hdri_light_create_none_update_binding_resource()
 {
-    assert(NULL == this->m_hdri_light_irradiance_coefficients);
-    this->m_hdri_light_irradiance_coefficients = this->create_intermediate_buffer(sizeof(float) * (3U * 9U));
+    assert(NULL == this->m_hdri_light_sh_irradiance_coefficients);
+    this->m_hdri_light_sh_irradiance_coefficients = this->m_device->create_storage_intermediate_buffer(sizeof(float) * (3U * 9U));
 
     assert(NULL == this->m_environment_lighting_none_update_set_uniform_buffer);
-    this->m_environment_lighting_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(internal_align_up(static_cast<uint32_t>(sizeof(environment_lighting_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * INTERNAL_FRAME_THROTTLING_COUNT);
+    this->m_environment_lighting_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<environment_lighting_none_update_set_uniform_buffer_binding>());
 }
 
 void brx_anari_pal_device::hdri_light_destroy_none_update_binding_resource()
 {
-    assert(NULL != this->m_hdri_light_irradiance_coefficients);
-    this->destroy_intermediate_buffer(this->m_hdri_light_irradiance_coefficients);
-    this->m_hdri_light_irradiance_coefficients = NULL;
+    assert(NULL != this->m_hdri_light_sh_irradiance_coefficients);
+    this->helper_destroy_intermediate_buffer(this->m_hdri_light_sh_irradiance_coefficients);
+    this->m_hdri_light_sh_irradiance_coefficients = NULL;
 
     assert(NULL != this->m_environment_lighting_none_update_set_uniform_buffer);
     this->m_device->destroy_uniform_upload_buffer(this->m_environment_lighting_none_update_set_uniform_buffer);
@@ -74,8 +74,8 @@ void brx_anari_pal_device::hdri_light_create_none_update_descriptor()
 
     {
         {
-            assert(NULL != this->m_hdri_light_irradiance_coefficients);
-            brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_irradiance_coefficients->get_storage_buffer()};
+            assert(NULL != this->m_hdri_light_sh_irradiance_coefficients);
+            brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_sh_irradiance_coefficients->get_storage_buffer()};
             this->m_device->write_descriptor_set(this->m_environment_lighting_descriptor_set_none_update, 0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0U, sizeof(buffers) / sizeof(buffers[0]), NULL, NULL, NULL, buffers, NULL, NULL, NULL, NULL);
         }
 
@@ -274,13 +274,16 @@ void brx_anari_pal_device::hdri_light_create_per_environment_lighting_descriptor
 void brx_anari_pal_device::hdri_light_destroy_per_environment_lighting_descriptor()
 {
     assert(NULL != this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update);
-    this->destroy_descriptor_set(this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update);
+    this->helper_destroy_descriptor_set(this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update);
     this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update = NULL;
 }
 
 void brx_anari_pal_device::hdri_light_set_radiance(brx_anari_image *radiance)
 {
 #ifndef NDEBUG
+    assert(!this->m_hdri_light_layout_lock);
+    this->m_hdri_light_layout_lock = true;
+
     assert(!this->m_hdri_light_dirty_lock);
     this->m_hdri_light_dirty_lock = true;
 #endif
@@ -318,12 +321,17 @@ void brx_anari_pal_device::hdri_light_set_radiance(brx_anari_image *radiance)
 
 #ifndef NDEBUG
     this->m_hdri_light_dirty_lock = false;
+
+    this->m_hdri_light_layout_lock = false;
 #endif
 }
 
 void brx_anari_pal_device::hdri_light_set_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT layout)
 {
 #ifndef NDEBUG
+    assert(!this->m_hdri_light_layout_lock);
+    this->m_hdri_light_layout_lock = true;
+
     assert(!this->m_hdri_light_dirty_lock);
     this->m_hdri_light_dirty_lock = true;
 #endif
@@ -337,6 +345,8 @@ void brx_anari_pal_device::hdri_light_set_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT lay
 
 #ifndef NDEBUG
     this->m_hdri_light_dirty_lock = false;
+
+    this->m_hdri_light_layout_lock = false;
 #endif
 }
 
@@ -423,27 +433,22 @@ DirectX::XMFLOAT4X4 brx_anari_pal_device::hdri_light_get_world_to_environment_ma
     return world_to_environment_map_transform;
 }
 
-void brx_anari_pal_device::hdri_light_update_uniform_buffer(DirectX::XMFLOAT4X4 const &inverse_view_transform, DirectX::XMFLOAT4X4 const &inverse_projection_transform, DirectX::XMFLOAT4X4 const &world_to_environment_map_transform)
+void brx_anari_pal_device::hdri_light_update_uniform_buffer(uint32_t frame_throttling_index, DirectX::XMFLOAT4X4 const &inverse_view_transform, DirectX::XMFLOAT4X4 const &inverse_projection_transform, DirectX::XMFLOAT4X4 const &world_to_environment_map_transform)
 {
-    environment_lighting_none_update_set_uniform_buffer_binding *const environment_lighting_none_update_set_uniform_buffer_destination = reinterpret_cast<environment_lighting_none_update_set_uniform_buffer_binding *>(reinterpret_cast<uintptr_t>(this->m_environment_lighting_none_update_set_uniform_buffer->get_host_memory_range_base()) + internal_align_up(static_cast<uint32_t>(sizeof(environment_lighting_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index);
+    environment_lighting_none_update_set_uniform_buffer_binding *const environment_lighting_none_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<environment_lighting_none_update_set_uniform_buffer_binding>(frame_throttling_index, this->m_environment_lighting_none_update_set_uniform_buffer);
     environment_lighting_none_update_set_uniform_buffer_destination->g_inverse_view_transform = inverse_view_transform;
     environment_lighting_none_update_set_uniform_buffer_destination->g_inverse_projection_transform = inverse_projection_transform;
     environment_lighting_none_update_set_uniform_buffer_destination->g_world_to_environment_map_transform = world_to_environment_map_transform;
 }
 
-void brx_anari_pal_device::hdri_light_render_sh_projection(brx_pal_graphics_command_buffer *graphics_command_buffer)
+void brx_anari_pal_device::hdri_light_render_sh_projection(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_hdri_light_sh_dirty, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout)
 {
-#ifndef NDEBUG
-    assert(!this->m_hdri_light_dirty_lock);
-    this->m_hdri_light_dirty_lock = true;
-#endif
-
-    if (this->m_hdri_light_dirty)
+    if (inout_hdri_light_sh_dirty)
     {
-        this->m_graphics_command_buffers[this->m_frame_throttling_index]->begin_debug_utils_label("Environment Lighting SH Projection");
+        graphics_command_buffer->begin_debug_utils_label("Environment Lighting SH Projection");
 
         {
-            brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_irradiance_coefficients->get_storage_buffer()};
+            brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_sh_irradiance_coefficients->get_storage_buffer()};
             graphics_command_buffer->storage_resource_load_dont_care(sizeof(buffers) / sizeof(buffers[0]), buffers, 0U, NULL);
         }
 
@@ -455,8 +460,7 @@ void brx_anari_pal_device::hdri_light_render_sh_projection(brx_pal_graphics_comm
                     this->m_environment_lighting_descriptor_set_none_update,
                     this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update};
 
-                uint32_t const dynamic_offsets[] = {
-                    internal_align_up(static_cast<uint32_t>(sizeof(environment_lighting_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<environment_lighting_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
                 graphics_command_buffer->bind_compute_descriptor_sets(this->m_environment_lighting_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
@@ -464,12 +468,10 @@ void brx_anari_pal_device::hdri_light_render_sh_projection(brx_pal_graphics_comm
             graphics_command_buffer->dispatch(1U, 1U, 1U);
         }
 
-        BRX_ANARI_HDRI_LIGHT_LAYOUT const hdri_light_layout = this->m_hdri_light_layout;
-
         if ((NULL != this->m_hdri_light_radiance) && ((BRX_ANARI_HDRI_LIGHT_LAYOUT_EQUIRECTANGULAR == hdri_light_layout) || (BRX_ANARI_HDRI_LIGHT_LAYOUT_OCTAHEDRAL == hdri_light_layout)))
         {
             {
-                brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_irradiance_coefficients->get_storage_buffer()};
+                brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_sh_irradiance_coefficients->get_storage_buffer()};
                 graphics_command_buffer->storage_resource_barrier(sizeof(buffers) / sizeof(buffers[0]), buffers, 0U, NULL);
             }
 
@@ -497,8 +499,7 @@ void brx_anari_pal_device::hdri_light_render_sh_projection(brx_pal_graphics_comm
                     this->m_environment_lighting_descriptor_set_none_update,
                     this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update};
 
-                uint32_t const dynamic_offsets[] = {
-                    internal_align_up(static_cast<uint32_t>(sizeof(environment_lighting_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<environment_lighting_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
                 graphics_command_buffer->bind_compute_descriptor_sets(this->m_environment_lighting_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
@@ -512,24 +513,18 @@ void brx_anari_pal_device::hdri_light_render_sh_projection(brx_pal_graphics_comm
         }
 
         {
-            brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_irradiance_coefficients->get_storage_buffer()};
+            brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_sh_irradiance_coefficients->get_storage_buffer()};
             graphics_command_buffer->storage_resource_store(sizeof(buffers) / sizeof(buffers[0]), buffers, 0U, NULL);
         }
 
         graphics_command_buffer->end_debug_utils_label();
 
-        this->m_hdri_light_dirty = false;
+        inout_hdri_light_sh_dirty = false;
     }
-
-#ifndef NDEBUG
-    this->m_hdri_light_dirty_lock = false;
-#endif
 }
 
-void brx_anari_pal_device::hdri_light_render_skybox(brx_pal_graphics_command_buffer *graphics_command_buffer)
+void brx_anari_pal_device::hdri_light_render_skybox(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout)
 {
-    BRX_ANARI_HDRI_LIGHT_LAYOUT const hdri_light_layout = this->m_hdri_light_layout;
-
     if ((BRX_ANARI_HDRI_LIGHT_LAYOUT_EQUIRECTANGULAR == hdri_light_layout) || (BRX_ANARI_HDRI_LIGHT_LAYOUT_OCTAHEDRAL == hdri_light_layout))
     {
         {
@@ -554,7 +549,7 @@ void brx_anari_pal_device::hdri_light_render_skybox(brx_pal_graphics_command_buf
         {
             brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_environment_lighting_descriptor_set_none_update, this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update};
 
-            uint32_t const dynamic_offsets[] = {internal_align_up(static_cast<uint32_t>(sizeof(environment_lighting_none_update_set_uniform_buffer_binding)), this->m_uniform_upload_buffer_offset_alignment) * this->m_frame_throttling_index};
+            uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<environment_lighting_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
             graphics_command_buffer->bind_graphics_descriptor_sets(this->m_environment_lighting_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
         }

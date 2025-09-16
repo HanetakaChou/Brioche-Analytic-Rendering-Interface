@@ -82,7 +82,7 @@ static inline bool internal_is_power_of_2(uint32_t width_or_height);
 static inline void internal_fit_power_of_2(uint32_t origin_width, uint32_t origin_height, uint32_t &target_width, uint32_t &target_height);
 static inline uint32_t internal_count_mips(uint32_t width, uint32_t height);
 
-brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(BRX_ANARI_IMAGE_FORMAT const origin_format, void const *const origin_pixel_data, uint32_t const origin_width, uint32_t const origin_height)
+void brx_anari_pal_device::init_image(BRX_ANARI_IMAGE_FORMAT const origin_format, void const *const origin_pixel_data, uint32_t const origin_width, uint32_t const origin_height, brx_pal_sampled_asset_image **const out_asset_image)
 {
     // TODO: merge submit and barrier
 
@@ -394,10 +394,17 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
 
         for (uint32_t mip_level_index = 0U; mip_level_index < mip_level_count; ++mip_level_index)
         {
-            upload_command_buffer->upload_from_staging_upload_buffer_to_sampled_asset_image(destination_asset_image, format, zeroth_width, zeroth_height, mip_level_index, image_staging_upload_buffer, subresource_memcpy_dests[mip_level_index].staging_upload_buffer_offset, subresource_memcpy_dests[mip_level_index].output_row_pitch, subresource_memcpy_dests[mip_level_index].output_row_count);
-
             uploaded_asset_image_subresources[mip_level_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{destination_asset_image, mip_level_index};
         }
+
+        upload_command_buffer->asset_resource_load_dont_care(0U, NULL, static_cast<uint32_t>(uploaded_asset_image_subresources.size()), uploaded_asset_image_subresources.data());
+
+        for (uint32_t mip_level_index = 0U; mip_level_index < mip_level_count; ++mip_level_index)
+        {
+            upload_command_buffer->upload_from_staging_upload_buffer_to_sampled_asset_image(&uploaded_asset_image_subresources[mip_level_index], format, zeroth_width, zeroth_height, image_staging_upload_buffer, subresource_memcpy_dests[mip_level_index].staging_upload_buffer_offset, subresource_memcpy_dests[mip_level_index].output_row_pitch, subresource_memcpy_dests[mip_level_index].output_row_count);
+        }
+
+        upload_command_buffer->asset_resource_store(0U, NULL, static_cast<uint32_t>(uploaded_asset_image_subresources.size()), uploaded_asset_image_subresources.data());
 
         upload_command_buffer->release(0U, NULL, static_cast<uint32_t>(uploaded_asset_image_subresources.size()), uploaded_asset_image_subresources.data(), 0U, NULL);
 
@@ -430,25 +437,7 @@ brx_pal_sampled_asset_image *brx_anari_pal_device::internal_create_asset_image(B
     this->m_device->destroy_staging_upload_buffer(image_staging_upload_buffer);
     image_staging_upload_buffer = NULL;
 
-    return destination_asset_image;
-}
-
-void brx_anari_pal_device::internal_destroy_asset_image(brx_pal_sampled_asset_image *const image)
-{
-#ifndef NDEBUG
-    assert(!this->m_frame_throttling_index_lock);
-    this->m_frame_throttling_index_lock = true;
-#endif
-
-    assert(NULL != image);
-
-    uint32_t const previous_frame_throttling_index = ((this->m_frame_throttling_index >= 1U) ? this->m_frame_throttling_index : INTERNAL_FRAME_THROTTLING_COUNT) - 1U;
-
-    this->m_pending_destroy_sampled_asset_images[previous_frame_throttling_index].push_back(image);
-
-#ifndef NDEBUG
-    this->m_frame_throttling_index_lock = false;
-#endif
+    (*out_asset_image) = destination_asset_image;
 }
 
 brx_anari_image *brx_anari_pal_device::new_image(BRX_ANARI_IMAGE_FORMAT format, void const *pixel_data, uint32_t width, uint32_t height)
@@ -498,7 +487,7 @@ inline void brx_anari_pal_image::init(brx_anari_pal_device *device, BRX_ANARI_IM
     this->m_ref_count = 1U;
 
     assert(NULL == this->m_image);
-    this->m_image = device->internal_create_asset_image(format, pixel_data, width, height);
+    device->init_image(format, pixel_data, width, height, &this->m_image);
 
     assert(0U == this->m_width);
     this->m_width = width;
@@ -512,7 +501,7 @@ inline void brx_anari_pal_image::uninit(brx_anari_pal_device *device)
     assert(0U == this->m_ref_count);
 
     assert(NULL != this->m_image);
-    device->internal_destroy_asset_image(this->m_image);
+    device->helper_destroy_asset_image(this->m_image);
     this->m_image = NULL;
 }
 

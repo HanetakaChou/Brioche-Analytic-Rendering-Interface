@@ -29,7 +29,7 @@ brx_bool brx_vct_application_bridge_get_gbuffer_surface(in brx_int2 in_screen_sp
 {
     // [Reversed-Z](https://developer.nvidia.com/content/depth-precision-visualized)
     const brx_float INVALID_SCENE_DEPTH_THRESHOLD = 0.0;
-    
+
     brx_int2 screen_space_dimension = brx_write_only_texture_2d_get_dimension(u_indirect_radiance_and_ambient_occlusion);
 
     brx_float2 screen_space_uv = (brx_float2(in_screen_space_coordinates) + brx_float2(0.5, 0.5)) / brx_float2(screen_space_dimension);
@@ -103,30 +103,23 @@ brx_float3 brx_vct_application_bridge_get_clipmap_center()
 
 brx_float brx_vct_application_bridge_get_clipmap_opacity(in brx_float3 in_opacity_texture_coordinates)
 {
-#if 1
-    brx_int3 opacity_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_opacity, 0);
+    brx_int3 opacity_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_opacity_r16, 0);
 
     brx_float3 normalized_opacity_texture_coordinates = in_opacity_texture_coordinates / brx_float3(opacity_texture_dimension);
 
-    brx_float opacity = brx_sample_level_3d(t_clipmap_texture_opacity, s_sampler, normalized_opacity_texture_coordinates, 0).x;
-#else
-    brx_float opacity = brx_uint_as_float(brx_fetch_3d(t_clipmap_texture_opacity, brx_int4(brx_round(in_opacity_texture_coordinates), 0))).x;
-#endif
+    brx_float opacity = brx_sample_level_3d(t_clipmap_texture_opacity_r16, s_sampler, normalized_opacity_texture_coordinates, 0).x;
 
     return opacity;
 }
 
-brx_float brx_vct_application_bridge_get_clipmap_illumination(in brx_float3 in_illumination_texture_coordinates)
+brx_float3 brx_vct_application_bridge_get_clipmap_illumination(in brx_float3 in_illumination_texture_coordinates)
 {
-#if 1
-    brx_int3 illumination_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_illumination, 0);
+    brx_int3 illumination_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_illumination_r16g16b16, 0);
 
     brx_float3 normalized_illumination_texture_coordinates = in_illumination_texture_coordinates / brx_float3(illumination_texture_dimension);
 
-    brx_float illumination_channel = brx_sample_level_3d(t_clipmap_texture_illumination, s_sampler, normalized_illumination_texture_coordinates, 0).x;
-#else
-    brx_float illumination_channel = brx_uint_as_float(brx_fetch_3d(t_clipmap_texture_illumination, brx_int4(brx_round(in_illumination_texture_coordinates), 0))).x;
-#endif
+    brx_float3 illumination_channel = brx_sample_level_3d(t_clipmap_texture_illumination_r16g16b16, s_sampler, normalized_illumination_texture_coordinates, 0).xyz;
+
     return illumination_channel;
 }
 

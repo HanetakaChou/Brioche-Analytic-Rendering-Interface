@@ -171,8 +171,12 @@ class brx_anari_pal_device final : public brx_anari_device
 #endif
 	bool m_voxel_cone_tracing_dirty;
 	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_mask;
-	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_opacity;
-	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_opacity_r32;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_opacity_r16;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination_r32;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination_g32;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination_b32;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination_r16g16b16;
 	brx_pal_storage_image *m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_zero_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_clear_pipeline;
@@ -181,6 +185,7 @@ class brx_anari_pal_device final : public brx_anari_device
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_low_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_medium_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_high_pipeline;
+	brx_pal_compute_pipeline *m_voxel_cone_tracing_pack_pipeline;
 	brx_pal_frame_buffer *m_voxel_cone_tracing_voxelization_frame_buffer;
 #ifndef NDEBUG
 	bool m_renderer_gi_quality_lock;

@@ -127,6 +127,7 @@ all : \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl \
+	$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl \
@@ -193,6 +194,10 @@ $(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl $(SPIRV_DIR)
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
 	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=frag $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d" -o "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl"
 
+$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.inl $(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl
+	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
+	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=comp $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.d" -o "$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl"
+
 $(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl $(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
 	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=comp $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d" -o "$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl"
@@ -229,6 +234,7 @@ $(SPIRV_DIR)/_internal_post_processing_fragment.inl $(SPIRV_DIR)/_internal_post_
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d \
+	$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.d \
@@ -251,6 +257,7 @@ clean:
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl)
@@ -271,6 +278,7 @@ clean:
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.d)

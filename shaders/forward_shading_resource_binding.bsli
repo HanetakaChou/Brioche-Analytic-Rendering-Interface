@@ -29,13 +29,17 @@
 
 brx_read_write_texture_3d_uint(u_clipmap_texture_mask, 0, 0);
 
-brx_read_write_texture_3d_uint(u_clipmap_texture_opacity, 0, 1);
+brx_read_write_texture_3d_uint(u_clipmap_texture_opacity_r32, 0, 1);
 
-brx_read_write_texture_3d_uint(u_clipmap_texture_illumination, 0, 2);
+brx_read_write_texture_3d_uint(u_clipmap_texture_illumination_r32, 0, 2);
 
-brx_sampler_state(s_sampler, 0, 3);
+brx_read_write_texture_3d_uint(u_clipmap_texture_illumination_g32, 0, 3);
 
-brx_cbuffer(forward_shading_none_update_set_uniform_buffer_binding, 0, 4)
+brx_read_write_texture_3d_uint(u_clipmap_texture_illumination_b32, 0, 4);
+
+brx_sampler_state(s_sampler, 0, 5);
+
+brx_cbuffer(forward_shading_none_update_set_uniform_buffer_binding, 0, 6)
 {
     brx_column_major brx_float4x4 g_view_transform;
     brx_column_major brx_float4x4 g_projection_transform;
@@ -51,11 +55,11 @@ brx_cbuffer(forward_shading_none_update_set_uniform_buffer_binding, 0, 4)
 
 };
 
-brx_read_only_byte_address_buffer(t_environment_map_sh_coefficients, 0, 5);
+brx_read_only_byte_address_buffer(t_environment_map_sh_coefficients, 0, 7);
 
-brx_texture_2d(t_lut_specular_hdr_fresnel_factors, 0, 6);
+brx_texture_2d(t_lut_specular_hdr_fresnel_factors, 0, 8);
 
-brx_texture_2d_array(t_lut_specular_transfer_function_sh_coefficients, 0, 7);
+brx_texture_2d_array(t_lut_specular_transfer_function_sh_coefficients, 0, 9);
 
 brx_cbuffer(forward_shading_per_surface_group_update_set_uniform_buffer_binding, 1, 0)
 {
@@ -71,11 +75,13 @@ brx_texture_2d_table(t_surface_images, 2, 4, 4);
     brx_root_signature_root_descriptor_table_uav(0, 0, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_uav(0, 1, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_uav(0, 2, 1) brx_root_signature_root_parameter_split       \
-    brx_root_signature_root_descriptor_table_sampler(0, 3, 1) brx_root_signature_root_parameter_split   \
-    brx_root_signature_root_cbv(0, 4) brx_root_signature_root_parameter_split                           \
-    brx_root_signature_root_descriptor_table_srv(0, 5, 1) brx_root_signature_root_parameter_split       \
-    brx_root_signature_root_descriptor_table_srv(0, 6, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 3, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 4, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_sampler(0, 5, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_cbv(0, 6) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(0, 7, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 8, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 9, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \
@@ -86,11 +92,13 @@ brx_texture_2d_table(t_surface_images, 2, 4, 4);
     brx_root_signature_root_descriptor_table_uav(0, 0, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_uav(0, 1, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_uav(0, 2, 1) brx_root_signature_root_parameter_split       \
-    brx_root_signature_root_descriptor_table_sampler(0, 3, 1) brx_root_signature_root_parameter_split   \
-    brx_root_signature_root_cbv(0, 4) brx_root_signature_root_parameter_split                           \
-    brx_root_signature_root_descriptor_table_srv(0, 5, 1) brx_root_signature_root_parameter_split       \
-    brx_root_signature_root_descriptor_table_srv(0, 6, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 3, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 4, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_sampler(0, 5, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_cbv(0, 6) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(0, 7, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 8, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(0, 9, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
     brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \

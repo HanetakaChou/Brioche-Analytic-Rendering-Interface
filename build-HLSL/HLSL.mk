@@ -128,6 +128,7 @@ all : \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.inl \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl \
+	$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl \
@@ -209,6 +210,11 @@ $(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl $(DXIL_DIR)/_
 	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl"
 	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl" -Vn "voxel_cone_tracing_voxelization_fragment_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl"
 
+$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl
+	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl" -Vn "voxel_cone_tracing_pack_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl"
+
 $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
 	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl"
@@ -250,6 +256,7 @@ $(DXIL_DIR)/_internal_post_processing_fragment.inl $(DXIL_DIR)/_internal_post_pr
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.d \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d \
+	$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.d \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.d \
 	$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.d \
@@ -272,6 +279,7 @@ clean:
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl)
+	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl)
@@ -292,6 +300,7 @@ clean:
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d)
+	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.d)

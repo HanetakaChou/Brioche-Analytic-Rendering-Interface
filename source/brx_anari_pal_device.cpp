@@ -75,8 +75,8 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_environment_lighting_sh_projection_clear_pipeline(NULL),
       m_environment_lighting_sh_projection_equirectangular_map_pipeline(NULL),
       m_environment_lighting_sh_projection_octahedral_map_pipeline(NULL),
-      m_direct_radiance_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_A2R10G10B10_UNORM_PACK32),
-      m_ambient_radiance_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_A2R10G10B10_UNORM_PACK32),
+      m_direct_radiance_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT),
+      m_ambient_radiance_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT),
       m_gbuffer_normal_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16_SNORM),
       m_gbuffer_base_color_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R8G8B8A8_SRGB),
       m_gbuffer_roughness_metallic_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R8G8_UNORM),
@@ -145,8 +145,12 @@ brx_anari_pal_device::brx_anari_pal_device()
 #endif
       m_voxel_cone_tracing_dirty(true),
       m_voxel_cone_tracing_clipmap_mask(NULL),
-      m_voxel_cone_tracing_clipmap_opacity(NULL),
-      m_voxel_cone_tracing_clipmap_illumination(NULL),
+      m_voxel_cone_tracing_clipmap_opacity_r32(NULL),
+      m_voxel_cone_tracing_clipmap_opacity_r16(NULL),
+      m_voxel_cone_tracing_clipmap_illumination_r32(NULL),
+      m_voxel_cone_tracing_clipmap_illumination_g32(NULL),
+      m_voxel_cone_tracing_clipmap_illumination_b32(NULL),
+      m_voxel_cone_tracing_clipmap_illumination_r16g16b16(NULL),
       m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion(NULL),
       m_voxel_cone_tracing_zero_pipeline(NULL),
       m_voxel_cone_tracing_clear_pipeline(NULL),
@@ -155,6 +159,7 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_voxel_cone_tracing_cone_tracing_low_pipeline(NULL),
       m_voxel_cone_tracing_cone_tracing_medium_pipeline(NULL),
       m_voxel_cone_tracing_cone_tracing_high_pipeline(NULL),
+      m_voxel_cone_tracing_pack_pipeline(NULL),
       m_voxel_cone_tracing_voxelization_frame_buffer(NULL),
 #ifndef NDEBUG
       m_renderer_gi_quality_lock(false),
@@ -189,8 +194,8 @@ brx_anari_pal_device::~brx_anari_pal_device()
     assert(NULL == this->m_environment_lighting_sh_projection_clear_pipeline);
     assert(NULL == this->m_environment_lighting_sh_projection_equirectangular_map_pipeline);
     assert(NULL == this->m_environment_lighting_sh_projection_octahedral_map_pipeline);
-    assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_A2R10G10B10_UNORM_PACK32 == this->m_direct_radiance_image_format);
-    assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_A2R10G10B10_UNORM_PACK32 == this->m_ambient_radiance_image_format);
+    assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT == this->m_direct_radiance_image_format);
+    assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16B16A16_SFLOAT == this->m_ambient_radiance_image_format);
     assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R16G16_SNORM == this->m_gbuffer_normal_image_format);
     assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R8G8B8A8_SRGB == this->m_gbuffer_base_color_image_format);
     assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R8G8_UNORM == this->m_gbuffer_roughness_metallic_image_format);
@@ -245,8 +250,12 @@ brx_anari_pal_device::~brx_anari_pal_device()
     assert(NULL == this->m_hdri_light_environment_map_sh_coefficients);
     assert(NULL == this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update);
     assert(NULL == this->m_voxel_cone_tracing_clipmap_mask);
-    assert(NULL == this->m_voxel_cone_tracing_clipmap_opacity);
-    assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination);
+    assert(NULL == this->m_voxel_cone_tracing_clipmap_opacity_r32);
+    assert(NULL == this->m_voxel_cone_tracing_clipmap_opacity_r16);
+    assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_r32);
+    assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_g32);
+    assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_b32);
+    assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_r16g16b16);
     assert(NULL == this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion);
     assert(NULL == this->m_voxel_cone_tracing_zero_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_clear_pipeline);
@@ -255,6 +264,7 @@ brx_anari_pal_device::~brx_anari_pal_device()
     assert(NULL == this->m_voxel_cone_tracing_cone_tracing_low_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_cone_tracing_medium_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_cone_tracing_high_pipeline);
+    assert(NULL == this->m_voxel_cone_tracing_pack_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_voxelization_frame_buffer);
 }
 
@@ -325,11 +335,13 @@ void brx_anari_pal_device::init(void *wsi_connection)
                     {0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
-                    {3U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
-                    {4U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U},
-                    {5U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 1U},
-                    {6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
+                    {3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
+                    {4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
+                    {5U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
+                    {6U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U},
+                    {7U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 1U},
+                    {8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
                 forward_shading_descriptor_set_layout_none_update = this->m_device->create_descriptor_set_layout(sizeof(forward_shading_descriptor_set_layout_none_update_bindings) / sizeof(forward_shading_descriptor_set_layout_none_update_bindings[0]), forward_shading_descriptor_set_layout_none_update_bindings);
 
                 assert(NULL == this->m_forward_shading_descriptor_set_layout_per_surface_group_update);
@@ -371,39 +383,49 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 }
 
                 {
-                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_opacity};
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_opacity_r32};
                     this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
-                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination};
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_r32};
                     this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_g32};
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                }
+
+                {
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_b32};
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                }
+
+                {
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 5U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
                 }
 
                 {
                     constexpr uint32_t const dynamic_uniform_buffers_range = sizeof(forward_shading_none_update_set_uniform_buffer_binding);
 
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &this->m_forward_shading_none_update_set_uniform_buffer, &dynamic_uniform_buffers_range, NULL, NULL, NULL, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 6U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &this->m_forward_shading_none_update_set_uniform_buffer, &dynamic_uniform_buffers_range, NULL, NULL, NULL, NULL, NULL, NULL);
                 }
 
                 {
                     assert(NULL != this->m_hdri_light_environment_map_sh_coefficients);
                     brx_pal_read_only_storage_buffer const *buffers[] = {this->m_hdri_light_environment_map_sh_coefficients->get_read_only_storage_buffer()};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 5U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 0U, sizeof(buffers) / sizeof(buffers[0]), NULL, NULL, buffers, NULL, NULL, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 7U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 0U, sizeof(buffers) / sizeof(buffers[0]), NULL, NULL, buffers, NULL, NULL, NULL, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_hdr_fresnel_factors_asset_image->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_transfer_function_sh_coefficients_asset_image->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
             }
 
@@ -415,17 +437,26 @@ void brx_anari_pal_device::init(void *wsi_connection)
                     {1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
-                    {4U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
-                    {5U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U},
-                    {6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
+                    {5U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
+                    {6U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
+                    {7U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
+                    {8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
+                    {9U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U},
                     {10U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
                     {11U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
                     {12U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
                     {13U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {14U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
+                    {14U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {15U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {16U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {18U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {19U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {20U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {21U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {22U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {23U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
                 this->m_post_processing_descriptor_set_layout_none_update = this->m_device->create_descriptor_set_layout(sizeof(post_processing_pipeline_none_update_descriptor_set_layout_bindings) / sizeof(post_processing_pipeline_none_update_descriptor_set_layout_bindings[0]), post_processing_pipeline_none_update_descriptor_set_layout_bindings);
 
                 assert(NULL == this->m_post_processing_pipeline_layout);
@@ -455,32 +486,77 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 }
 
                 {
-                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_opacity};
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_opacity_r32};
                     this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
-                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination};
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_opacity_r16};
                     this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_clamp_sampler, NULL);
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_r32};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                }
+
+                {
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_g32};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                }
+
+                {
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_b32};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 5U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                }
+
+                {
+                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_r16g16b16};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 6U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                }
+
+                {
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_clamp_sampler, NULL);
                 }
 
                 {
                     constexpr uint32_t const dynamic_uniform_buffers_range = sizeof(post_processing_none_update_set_uniform_buffer_binding);
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 5U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &this->m_post_processing_none_update_set_uniform_buffer, &dynamic_uniform_buffers_range, NULL, NULL, NULL, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 9U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &this->m_post_processing_none_update_set_uniform_buffer, &dynamic_uniform_buffers_range, NULL, NULL, NULL, NULL, NULL, NULL);
                 }
 
                 {
-                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_opacity->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 12U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_mask->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 16U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
 
                 {
-                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 13U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_opacity_r32->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_opacity_r16->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 18U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_r32->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 19U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_g32->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 20U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_b32->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 21U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_r16g16b16->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 22U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
             }
 
@@ -1189,42 +1265,42 @@ inline void brx_anari_pal_device::attach_swap_chain()
                 {
                     {
                         brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 7U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                     }
 
                     {
                         brx_pal_sampled_image const *const sampled_images[] = {this->m_direct_radiance_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
-                    }
-
-                    {
-                        brx_pal_sampled_image const *const sampled_images[] = {this->m_ambient_radiance_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
-                    }
-
-                    {
-                        brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_normal_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
-                    }
-
-                    {
-                        brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_base_color_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
-                    }
-
-                    {
-                        brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_roughness_metallic_image->get_sampled_image()};
                         this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 10U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
-                        brx_pal_sampled_image const *const sampled_images[] = {this->m_scene_depth_image->get_sampled_image()};
+                        brx_pal_sampled_image const *const sampled_images[] = {this->m_ambient_radiance_image->get_sampled_image()};
                         this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 11U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
-                        brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion->get_sampled_image()};
+                        brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_normal_image->get_sampled_image()};
+                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 12U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    }
+
+                    {
+                        brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_base_color_image->get_sampled_image()};
+                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 13U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    }
+
+                    {
+                        brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_roughness_metallic_image->get_sampled_image()};
                         this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 14U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    }
+
+                    {
+                        brx_pal_sampled_image const *const sampled_images[] = {this->m_scene_depth_image->get_sampled_image()};
+                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 15U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    }
+
+                    {
+                        brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion->get_sampled_image()};
+                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 23U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
                 }
             }

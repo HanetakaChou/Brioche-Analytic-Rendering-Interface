@@ -116,16 +116,44 @@ brx_float brx_vct_application_bridge_get_clipmap_opacity(in brx_float3 in_opacit
     return opacity;
 }
 
-brx_float brx_vct_application_bridge_get_clipmap_illumination(in brx_float3 in_illumination_texture_coordinates)
+brx_float brx_vct_application_bridge_get_clipmap_illumination_red(in brx_float3 in_illumination_texture_coordinates)
 {
 #if 1
-    brx_int3 illumination_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_illumination, 0);
+    brx_int3 illumination_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_illumination_red, 0);
 
     brx_float3 normalized_illumination_texture_coordinates = in_illumination_texture_coordinates / brx_float3(illumination_texture_dimension);
 
-    brx_float illumination_channel = brx_sample_level_3d(t_clipmap_texture_illumination, s_sampler, normalized_illumination_texture_coordinates, 0).x;
+    brx_float illumination_channel = brx_sample_level_3d(t_clipmap_texture_illumination_red, s_sampler, normalized_illumination_texture_coordinates, 0).x;
 #else
-    brx_float illumination_channel = brx_uint_as_float(brx_fetch_3d(t_clipmap_texture_illumination, brx_int4(brx_round(in_illumination_texture_coordinates), 0))).x;
+    brx_float illumination_channel = brx_uint_as_float(brx_fetch_3d(t_clipmap_texture_illumination_red, brx_int4(brx_round(in_illumination_texture_coordinates), 0))).x;
+#endif
+    return illumination_channel;
+}
+
+brx_float brx_vct_application_bridge_get_clipmap_illumination_green(in brx_float3 in_illumination_texture_coordinates)
+{
+#if 1
+    brx_int3 illumination_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_illumination_green, 0);
+
+    brx_float3 normalized_illumination_texture_coordinates = in_illumination_texture_coordinates / brx_float3(illumination_texture_dimension);
+
+    brx_float illumination_channel = brx_sample_level_3d(t_clipmap_texture_illumination_green, s_sampler, normalized_illumination_texture_coordinates, 0).x;
+#else
+    brx_float illumination_channel = brx_uint_as_float(brx_fetch_3d(t_clipmap_texture_illumination_green, brx_int4(brx_round(in_illumination_texture_coordinates), 0))).x;
+#endif
+    return illumination_channel;
+}
+
+brx_float brx_vct_application_bridge_get_clipmap_illumination_blue(in brx_float3 in_illumination_texture_coordinates)
+{
+#if 1
+    brx_int3 illumination_texture_dimension = brx_texture_3d_get_dimension(t_clipmap_texture_illumination_blue, 0);
+
+    brx_float3 normalized_illumination_texture_coordinates = in_illumination_texture_coordinates / brx_float3(illumination_texture_dimension);
+
+    brx_float illumination_channel = brx_sample_level_3d(t_clipmap_texture_illumination_blue, s_sampler, normalized_illumination_texture_coordinates, 0).x;
+#else
+    brx_float illumination_channel = brx_uint_as_float(brx_fetch_3d(t_clipmap_texture_illumination_blue, brx_int4(brx_round(in_illumination_texture_coordinates), 0))).x;
 #endif
     return illumination_channel;
 }

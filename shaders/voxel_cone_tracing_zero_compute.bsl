@@ -32,7 +32,6 @@ void brx_vct_application_bridge_set_clipmap_mask(in brx_int3 in_mask_texture_coo
 
 brx_int3 brx_vct_application_bridge_get_clipmap_opacity_dimension()
 {
-
     return brx_write_only_texture_3d_uint_get_dimension(u_clipmap_texture_opacity);
 }
 
@@ -41,12 +40,32 @@ void brx_vct_application_bridge_set_clipmap_opacity(in brx_int3 in_opacity_textu
     brx_store_3d_uint(u_clipmap_texture_opacity, in_opacity_texture_coordinates, in_packed_opacity);
 }
 
-brx_int3 brx_vct_application_bridge_get_clipmap_illumination_dimension()
+brx_int3 brx_vct_application_bridge_get_clipmap_illumination_dimension_red()
 {
-    return brx_write_only_texture_3d_uint_get_dimension(u_clipmap_texture_illumination);
+    return brx_write_only_texture_3d_uint_get_dimension(u_clipmap_texture_illumination_red);
 }
 
-void brx_vct_application_bridge_set_clipmap_illumination(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
+void brx_vct_application_bridge_set_clipmap_illumination_red(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
 {
-    brx_store_3d_uint(u_clipmap_texture_illumination, in_illumination_texture_coordinates, in_packed_illumination);
+    brx_store_3d_uint(u_clipmap_texture_illumination_red, in_illumination_texture_coordinates, in_packed_illumination);
+}
+
+brx_int3 brx_vct_application_bridge_get_clipmap_illumination_dimension_green()
+{
+    return brx_write_only_texture_3d_uint_get_dimension(u_clipmap_texture_illumination_green);
+}
+
+void brx_vct_application_bridge_set_clipmap_illumination_green(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
+{
+    brx_store_3d_uint(u_clipmap_texture_illumination_green, in_illumination_texture_coordinates, in_packed_illumination);
+}
+
+brx_int3 brx_vct_application_bridge_get_clipmap_illumination_dimension_blue()
+{
+    return brx_write_only_texture_3d_uint_get_dimension(u_clipmap_texture_illumination_blue);
+}
+
+void brx_vct_application_bridge_set_clipmap_illumination_blue(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
+{
+    brx_store_3d_uint(u_clipmap_texture_illumination_blue, in_illumination_texture_coordinates, in_packed_illumination);
 }

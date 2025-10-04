@@ -43,11 +43,27 @@ void brx_anari_pal_device::voxel_cone_tracing_create_none_update_binding_resourc
     }
 
     {
-        assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination);
+        assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_red);
 
         DirectX::XMUINT3 const clipmap_illumination_texture_extent = brx_voxel_cone_tracing_resource_clipmap_illumination_texture_extent();
 
-        this->m_voxel_cone_tracing_clipmap_illumination = this->m_device->create_storage_image(BRX_PAL_STORAGE_IMAGE_FORMAT_R32_WRITE_UINT_READ_SFLOAT, clipmap_illumination_texture_extent.x, clipmap_illumination_texture_extent.y, true, clipmap_illumination_texture_extent.z, true);
+        this->m_voxel_cone_tracing_clipmap_illumination_red = this->m_device->create_storage_image(BRX_PAL_STORAGE_IMAGE_FORMAT_R32_WRITE_UINT_READ_SFLOAT, clipmap_illumination_texture_extent.x, clipmap_illumination_texture_extent.y, true, clipmap_illumination_texture_extent.z, true);
+    }
+
+    {
+        assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_green);
+
+        DirectX::XMUINT3 const clipmap_illumination_texture_extent = brx_voxel_cone_tracing_resource_clipmap_illumination_texture_extent();
+
+        this->m_voxel_cone_tracing_clipmap_illumination_green = this->m_device->create_storage_image(BRX_PAL_STORAGE_IMAGE_FORMAT_R32_WRITE_UINT_READ_SFLOAT, clipmap_illumination_texture_extent.x, clipmap_illumination_texture_extent.y, true, clipmap_illumination_texture_extent.z, true);
+    }
+
+    {
+        assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_blue);
+
+        DirectX::XMUINT3 const clipmap_illumination_texture_extent = brx_voxel_cone_tracing_resource_clipmap_illumination_texture_extent();
+
+        this->m_voxel_cone_tracing_clipmap_illumination_blue = this->m_device->create_storage_image(BRX_PAL_STORAGE_IMAGE_FORMAT_R32_WRITE_UINT_READ_SFLOAT, clipmap_illumination_texture_extent.x, clipmap_illumination_texture_extent.y, true, clipmap_illumination_texture_extent.z, true);
     }
 }
 
@@ -61,9 +77,17 @@ void brx_anari_pal_device::voxel_cone_tracing_destroy_none_update_binding_resour
     this->m_device->destroy_storage_image(this->m_voxel_cone_tracing_clipmap_opacity);
     this->m_voxel_cone_tracing_clipmap_opacity = NULL;
 
-    assert(NULL != this->m_voxel_cone_tracing_clipmap_illumination);
-    this->m_device->destroy_storage_image(this->m_voxel_cone_tracing_clipmap_illumination);
-    this->m_voxel_cone_tracing_clipmap_illumination = NULL;
+    assert(NULL != this->m_voxel_cone_tracing_clipmap_illumination_red);
+    this->m_device->destroy_storage_image(this->m_voxel_cone_tracing_clipmap_illumination_red);
+    this->m_voxel_cone_tracing_clipmap_illumination_red = NULL;
+
+    assert(NULL != this->m_voxel_cone_tracing_clipmap_illumination_green);
+    this->m_device->destroy_storage_image(this->m_voxel_cone_tracing_clipmap_illumination_green);
+    this->m_voxel_cone_tracing_clipmap_illumination_green = NULL;
+
+    assert(NULL != this->m_voxel_cone_tracing_clipmap_illumination_blue);
+    this->m_device->destroy_storage_image(this->m_voxel_cone_tracing_clipmap_illumination_blue);
+    this->m_voxel_cone_tracing_clipmap_illumination_blue = NULL;
 }
 
 void brx_anari_pal_device::voxel_cone_tracing_create_screen_size_dependent_none_update_binding_resource()
@@ -323,7 +347,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
             graphics_command_buffer->begin_debug_utils_label("Voxel Cone Tracing Zero Pass");
 
             {
-                brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination};
+                brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination_red, this->m_voxel_cone_tracing_clipmap_illumination_green, this->m_voxel_cone_tracing_clipmap_illumination_blue};
 
                 graphics_command_buffer->storage_resource_load_dont_care(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
             }
@@ -345,7 +369,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
             }
 
             {
-                brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination};
+                brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination_red, this->m_voxel_cone_tracing_clipmap_illumination_green, this->m_voxel_cone_tracing_clipmap_illumination_blue};
 
                 graphics_command_buffer->storage_resource_store(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
             }
@@ -356,7 +380,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
         }
 
         {
-            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination};
+            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination_red, this->m_voxel_cone_tracing_clipmap_illumination_green, this->m_voxel_cone_tracing_clipmap_illumination_blue};
 
             graphics_command_buffer->storage_resource_load_load(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
         }
@@ -384,7 +408,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
         }
 
         {
-            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination};
+            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination_red, this->m_voxel_cone_tracing_clipmap_illumination_green, this->m_voxel_cone_tracing_clipmap_illumination_blue};
 
             graphics_command_buffer->storage_resource_barrier(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
         }
@@ -444,7 +468,7 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
         }
 
         {
-            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination};
+            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_opacity, this->m_voxel_cone_tracing_clipmap_illumination_red, this->m_voxel_cone_tracing_clipmap_illumination_green, this->m_voxel_cone_tracing_clipmap_illumination_blue};
 
             graphics_command_buffer->storage_resource_store(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
         }

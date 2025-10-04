@@ -172,7 +172,9 @@ class brx_anari_pal_device final : public brx_anari_device
 	bool m_voxel_cone_tracing_dirty;
 	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_mask;
 	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_opacity;
-	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination_red;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination_green;
+	brx_pal_storage_image *m_voxel_cone_tracing_clipmap_illumination_blue;
 	brx_pal_storage_image *m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_zero_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_clear_pipeline;

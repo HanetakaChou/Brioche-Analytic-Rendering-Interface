@@ -76,9 +76,11 @@ brx_pixel_shader_parameter_end(main)
         }
 #elif (ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT_OCTAHEDRAL_MAP == ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT)
         {
-            brx_float2 environment_map_ndc_flip_y = brx_octahedral_map(environment_map_omega);
+            brx_float2 environment_map_ndc_flip_x = brx_octahedral_map(environment_map_omega);
 
-            brx_float2 environment_map_uv = (environment_map_ndc_flip_y + brx_float2(1.0, 1.0)) * brx_float2(0.5, 0.5);
+            // PBRT-V4: [File Format](https://www.pbrt.org/users-guide-v4#file_format_changes)
+            // PBRT-V4: [imgtool makeequiarea](https://github.com/mmp/pbrt-v4/blob/master/src/pbrt/cmd/imgtool.cpp#L2130)
+            brx_float2 environment_map_uv = (environment_map_ndc_flip_x + brx_float2(-1.0, -1.0)) * brx_float2(-0.5, -0.5);
 
             environment_map_raw_radiance = brx_sample_2d(t_environment_map, s_sampler, environment_map_uv).rgb;
         }

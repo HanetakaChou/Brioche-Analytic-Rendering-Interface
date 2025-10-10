@@ -99,9 +99,9 @@ else
 	DXIL_DIR := $(LOCAL_PATH)/../shaders/dxil/release
 endif
 ifeq ($(OS),Windows_NT)
-	HLSL_COMPILER_PATH := $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/win32/x64/dxc.exe
+	HLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/win32/x64/dxc.exe)
 else
-	HLSL_COMPILER_PATH := $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/linux/x64/dxc
+	HLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/linux/x64/dxc)
 endif
 
 HLSL_COMPILER_DEBUG_FLAGS :=

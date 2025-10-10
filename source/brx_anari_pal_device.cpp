@@ -569,6 +569,17 @@ void brx_anari_pal_device::init(void *wsi_connection)
             // Deforming Pipeline
             {
                 assert(NULL == this->m_deforming_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+                assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+                {
+#include "../shaders/spirv/deforming_compute.inl"
+                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
+                }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
                 switch (this->m_device->get_backend_name())
                 {
                 case BRX_PAL_BACKEND_NAME_D3D12:
@@ -588,6 +599,9 @@ void brx_anari_pal_device::init(void *wsi_connection)
                     assert(false);
                 }
                 }
+#else
+#error Unknown Compiler
+#endif
             }
 
             // Forward Shading Render Pass
@@ -625,7 +639,18 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 // we can simply use the over operation to render the result correctly (just like how we render the imgui)
 
                 assert(NULL == this->m_forward_shading_pipeline);
-
+#if defined(__GNUC__)
+#if defined(__linux__)
+                assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+                {
+#include "../shaders/spirv/forward_shading_vertex.inl"
+#include "../shaders/spirv/forward_shading_fragment.inl"
+                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_forward_shading_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER);
+                }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
                 switch (this->m_device->get_backend_name())
                 {
                 case BRX_PAL_BACKEND_NAME_D3D12:
@@ -647,6 +672,9 @@ void brx_anari_pal_device::init(void *wsi_connection)
                     assert(false);
                 }
                 }
+#else
+#error Unknown Compiler
+#endif
             }
 
             this->hdri_light_create_pipeline();
@@ -666,7 +694,18 @@ void brx_anari_pal_device::init(void *wsi_connection)
             // Post Process Pipeline
             {
                 assert(NULL == this->m_post_processing_pipeline);
-
+#if defined(__GNUC__)
+#if defined(__linux__)
+                assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+                {
+#include "../shaders/spirv/post_processing_vertex.inl"
+#include "../shaders/spirv/post_processing_fragment.inl"
+                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_post_processing_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+                }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
                 switch (this->m_device->get_backend_name())
                 {
                 case BRX_PAL_BACKEND_NAME_D3D12:
@@ -688,6 +727,9 @@ void brx_anari_pal_device::init(void *wsi_connection)
                     assert(false);
                 }
                 }
+#else
+#error Unknown Compiler
+#endif
             }
 
             this->voxel_cone_tracing_create_pipeline();
@@ -1126,7 +1168,18 @@ inline void brx_anari_pal_device::create_swap_chain_compatible_render_pass_and_p
         // Pipeline
         {
             assert(NULL == this->m_full_screen_transfer_pipeline);
-
+#if defined(__GNUC__)
+#if defined(__linux__)
+            assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+            {
+#include "../shaders/spirv/full_screen_transfer_vertex.inl"
+#include "../shaders/spirv/full_screen_transfer_fragment.inl"
+                this->m_full_screen_transfer_pipeline = this->m_device->create_graphics_pipeline(this->m_swap_chain_render_pass, this->m_full_screen_transfer_pipeline_layout, sizeof(full_screen_transfer_vertex_shader_module_code), full_screen_transfer_vertex_shader_module_code, sizeof(full_screen_transfer_fragment_shader_module_code), full_screen_transfer_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+            }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
             switch (this->m_device->get_backend_name())
             {
             case BRX_PAL_BACKEND_NAME_D3D12:
@@ -1148,6 +1201,9 @@ inline void brx_anari_pal_device::create_swap_chain_compatible_render_pass_and_p
                 assert(false);
             }
             }
+#else
+#error Unknown Compiler
+#endif
         }
     }
 

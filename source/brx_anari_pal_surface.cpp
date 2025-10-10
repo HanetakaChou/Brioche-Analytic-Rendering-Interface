@@ -33,6 +33,7 @@
 #include "../shaders/forward_shading_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/include/brx_packed_vector.h"
 #include "../../Brioche-Shader-Language/include/brx_octahedral_mapping.h"
+#include <cstring>
 
 brx_pal_storage_asset_buffer *brx_anari_pal_device::internal_create_asset_buffer(void const *const data_base, uint32_t const data_size)
 {

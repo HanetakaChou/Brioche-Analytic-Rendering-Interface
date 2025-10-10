@@ -81,8 +81,8 @@ void brx_anari_pal_device::hdri_light_create_none_update_descriptor()
         }
 
         {
-            assert(NULL != this->m_shared_none_update_set_linear_clamp_sampler);
-            this->m_device->write_descriptor_set(this->m_environment_lighting_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_clamp_sampler, NULL);
+            assert(NULL != this->m_shared_none_update_set_linear_wrap_sampler);
+            this->m_device->write_descriptor_set(this->m_environment_lighting_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
         }
 
         {
@@ -115,6 +115,17 @@ void brx_anari_pal_device::hdri_light_create_pipeline()
 {
     {
         assert(NULL == this->m_environment_lighting_sh_projection_clear_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/environment_lighting_sh_projection_environment_map_clear_compute.inl"
+            this->m_environment_lighting_sh_projection_clear_pipeline = this->m_device->create_compute_pipeline(this->m_environment_lighting_pipeline_layout, sizeof(environment_lighting_sh_projection_environment_map_clear_compute_shader_module_code), environment_lighting_sh_projection_environment_map_clear_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -134,8 +145,22 @@ void brx_anari_pal_device::hdri_light_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
 
         assert(NULL == this->m_environment_lighting_sh_projection_equirectangular_map_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/environment_lighting_sh_projection_equirectangular_environment_map_compute.inl"
+            this->m_environment_lighting_sh_projection_equirectangular_map_pipeline = this->m_device->create_compute_pipeline(this->m_environment_lighting_pipeline_layout, sizeof(environment_lighting_sh_projection_equirectangular_environment_map_compute_shader_module_code), environment_lighting_sh_projection_equirectangular_environment_map_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -155,8 +180,22 @@ void brx_anari_pal_device::hdri_light_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
 
         assert(NULL == this->m_environment_lighting_sh_projection_octahedral_map_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/environment_lighting_sh_projection_octahedral_environment_map_compute.inl"
+            this->m_environment_lighting_sh_projection_octahedral_map_pipeline = this->m_device->create_compute_pipeline(this->m_environment_lighting_pipeline_layout, sizeof(environment_lighting_sh_projection_octahedral_environment_map_compute_shader_module_code), environment_lighting_sh_projection_octahedral_environment_map_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -176,13 +215,27 @@ void brx_anari_pal_device::hdri_light_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
     }
 
     assert(NULL != this->m_forward_shading_render_pass);
 
     {
         assert(NULL == this->m_environment_lighting_skybox_equirectangular_map_pipeline);
-
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/environment_lighting_skybox_vertex.inl"
+#include "../shaders/spirv/environment_lighting_skybox_equirectangular_map_fragment.inl"
+            this->m_environment_lighting_skybox_equirectangular_map_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_environment_lighting_pipeline_layout, sizeof(environment_lighting_skybox_vertex_shader_module_code), environment_lighting_skybox_vertex_shader_module_code, sizeof(environment_lighting_skybox_equirectangular_map_fragment_shader_module_code), environment_lighting_skybox_equirectangular_map_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -204,11 +257,25 @@ void brx_anari_pal_device::hdri_light_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
     }
 
     {
         assert(NULL == this->m_environment_lighting_skybox_octahedral_map_pipeline);
-
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/environment_lighting_skybox_vertex.inl"
+#include "../shaders/spirv/environment_lighting_skybox_octahedral_map_fragment.inl"
+            this->m_environment_lighting_skybox_octahedral_map_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_environment_lighting_pipeline_layout, sizeof(environment_lighting_skybox_vertex_shader_module_code), environment_lighting_skybox_vertex_shader_module_code, sizeof(environment_lighting_skybox_octahedral_map_fragment_shader_module_code), environment_lighting_skybox_octahedral_map_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -230,6 +297,9 @@ void brx_anari_pal_device::hdri_light_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
     }
 }
 

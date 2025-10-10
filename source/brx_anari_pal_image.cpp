@@ -19,10 +19,11 @@
 #include <cassert>
 #include <algorithm>
 
-#define CV_IGNORE_DEBUG_BUILD_GUARD 1
+// #define CV_IGNORE_DEBUG_BUILD_GUARD 1
 #if defined(__GNUC__)
 // GCC or CLANG
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #elif defined(_MSC_VER)
 #if defined(__clang__)
 // CLANG-CL
@@ -32,11 +33,13 @@
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
 #pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #pragma GCC diagnostic pop
 #else
 // MSVC
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #endif
 #else
 #error Unknown Compiler

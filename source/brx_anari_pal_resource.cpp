@@ -19,6 +19,7 @@
 #include "../shaders/surface.bsli"
 #include "../../Hemispherical-Directional-Reflectance/include/brx_hemispherical_directional_reflectance_look_up_table_norms.h"
 #include "../../Spherical-Harmonic/include/brx_spherical_harmonic_look_up_table_transfer_functions.h"
+#include <cstring>
 
 static inline uint32_t internal_align_up(uint32_t value, uint32_t alignment);
 

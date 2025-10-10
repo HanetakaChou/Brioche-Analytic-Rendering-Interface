@@ -99,9 +99,9 @@ else
 	SPIRV_DIR := $(LOCAL_PATH)/../shaders/spirv/release
 endif
 ifeq ($(OS),Windows_NT)
-	GLSL_COMPILER_PATH := $(LOCAL_PATH)/../../shaderc/bin/win32/x64/glslc.exe
+	GLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../shaderc/bin/win32/x64/glslc.exe)
 else
-	GLSL_COMPILER_PATH := $(LOCAL_PATH)/../../shaderc/bin/linux/x64/glslc
+	GLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../shaderc/bin/linux/x64/glslc)
 endif
 
 GLSL_COMPILER_FLAGS :=

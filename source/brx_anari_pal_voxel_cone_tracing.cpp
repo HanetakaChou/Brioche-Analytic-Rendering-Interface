@@ -137,6 +137,17 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
 
     {
         assert(NULL == this->m_voxel_cone_tracing_zero_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_zero_compute.inl"
+            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -156,8 +167,22 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
 
         assert(NULL == this->m_voxel_cone_tracing_clear_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_clear_compute.inl"
+            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -177,8 +202,22 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
 
         assert(NULL == this->m_voxel_cone_tracing_pack_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_pack_compute.inl"
+            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -198,8 +237,22 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
 
         assert(NULL == this->m_voxel_cone_tracing_cone_tracing_low_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_cone_tracing_low_compute.inl"
+            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -219,8 +272,22 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
 
         assert(NULL == this->m_voxel_cone_tracing_cone_tracing_medium_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_cone_tracing_medium_compute.inl"
+            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -240,8 +307,22 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
 
         assert(NULL == this->m_voxel_cone_tracing_cone_tracing_high_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_cone_tracing_high_compute.inl"
+            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -261,6 +342,9 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
     }
 
     assert(NULL != this->m_forward_shading_pipeline_layout);
@@ -270,7 +354,18 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         this->m_voxel_cone_tracing_voxelization_render_pass = this->m_device->create_render_pass(0U, NULL, NULL);
 
         assert(NULL == this->m_voxel_cone_tracing_voxelization_pipeline);
-
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_forward_shading_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, false, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
         switch (this->m_device->get_backend_name())
         {
         case BRX_PAL_BACKEND_NAME_D3D12:
@@ -292,6 +387,9 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
             assert(false);
         }
         }
+#else
+#error Unknown Compiler
+#endif
     }
 
     assert(NULL == this->m_voxel_cone_tracing_voxelization_frame_buffer);

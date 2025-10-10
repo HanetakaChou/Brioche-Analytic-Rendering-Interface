@@ -10,18 +10,6 @@
     <Filter Include="source">
       <UniqueIdentifier>{5534087d-e7d9-4ff1-b9f3-1427a3ba9d42}</UniqueIdentifier>
     </Filter>
-    <Filter Include="thirdparty">
-      <UniqueIdentifier>{ece01274-ed27-4142-954c-19e76830423b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="thirdparty\OpenCV">
-      <UniqueIdentifier>{221d398e-9dd3-466a-b66c-af069938e92d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="thirdparty\OpenCV\bin">
-      <UniqueIdentifier>{4524361a-debe-41df-8471-7b798feba07b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="thirdparty\OpenCV\bin\x64">
-      <UniqueIdentifier>{7d3f6c56-3aa9-4a19-9a24-321c7c1abeba}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -58,13 +46,5 @@
     <ClInclude Include="..\source\brx_anari_pal_device.h">
       <Filter>source</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <CopyFileToFolders Include="..\..\OpenCV\build\x64\vc15\bin\opencv_ffmpeg3410_64.dll">
-      <Filter>thirdparty\OpenCV\bin\x64</Filter>
-    </CopyFileToFolders>
-    <CopyFileToFolders Include="..\..\OpenCV\build\x64\vc15\bin\opencv_world3410.dll">
-      <Filter>thirdparty\OpenCV\bin\x64</Filter>
-    </CopyFileToFolders>
   </ItemGroup>
 </Project>

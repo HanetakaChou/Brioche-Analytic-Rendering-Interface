@@ -81,8 +81,8 @@ void brx_anari_pal_device::hdri_light_create_none_update_descriptor()
         }
 
         {
-            assert(NULL != this->m_shared_none_update_set_linear_clamp_sampler);
-            this->m_device->write_descriptor_set(this->m_environment_lighting_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_clamp_sampler, NULL);
+            assert(NULL != this->m_shared_none_update_set_linear_wrap_sampler);
+            this->m_device->write_descriptor_set(this->m_environment_lighting_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
         }
 
         {

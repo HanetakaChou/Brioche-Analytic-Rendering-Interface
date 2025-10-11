@@ -37,15 +37,11 @@
 #pragma GCC diagnostic ignored "-Wreturn-type-c-linkage"
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/videoio.hpp>
 #pragma GCC diagnostic pop
 #else
 // MSVC
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-#include <opencv2/videoio.hpp>
 #endif
 #else
 #error Unknown Compiler

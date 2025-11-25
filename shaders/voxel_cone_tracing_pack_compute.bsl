@@ -26,32 +26,17 @@ brx_uint brx_vct_application_bridge_get_clipmap_mask(in brx_int3 in_mask_texture
     return brx_fetch_3d(t_clipmap_texture_mask, brx_int4(in_mask_texture_coordinates, 0)).x;
 }
 
-brx_float brx_vct_application_bridge_get_clipmap_opacity_r32(in brx_int3 in_opacity_texture_coordinates)
+brx_uint brx_vct_application_bridge_get_clipmap_illumination_opacity_r16g16(in brx_int3 in_illumination_opacity_texture_coordinates)
 {
-    return brx_fetch_3d(t_clipmap_texture_opacity_r32, brx_int4(in_opacity_texture_coordinates, 0)).x;
+    return brx_fetch_3d(t_clipmap_texture_illumination_opacity_r16g16, brx_int4(in_illumination_opacity_texture_coordinates, 0)).x;
 }
 
-brx_float brx_vct_application_bridge_get_clipmap_illumination_r32(in brx_int3 in_illumination_texture_coordinates)
+brx_uint brx_vct_application_bridge_get_clipmap_illumination_opacity_b16a16(in brx_int3 in_illumination_opacity_texture_coordinates)
 {
-    return brx_fetch_3d(t_clipmap_texture_illumination_r32, brx_int4(in_illumination_texture_coordinates, 0)).x;
+    return brx_fetch_3d(t_clipmap_texture_illumination_opacity_b16a16, brx_int4(in_illumination_opacity_texture_coordinates, 0)).x;
 }
 
-brx_float brx_vct_application_bridge_get_clipmap_illumination_g32(in brx_int3 in_illumination_texture_coordinates)
+void brx_vct_application_bridge_set_clipmap_illumination_opacity_r16g16b16a16(in brx_int3 in_illumination_opacity_texture_coordinates, in brx_float4 in_illumination_opacity)
 {
-    return brx_fetch_3d(t_clipmap_texture_illumination_g32, brx_int4(in_illumination_texture_coordinates, 0)).x;
-}
-
-brx_float brx_vct_application_bridge_get_clipmap_illumination_b32(in brx_int3 in_illumination_texture_coordinates)
-{
-    return brx_fetch_3d(t_clipmap_texture_illumination_b32, brx_int4(in_illumination_texture_coordinates, 0)).x;
-}
-
-void brx_vct_application_bridge_set_clipmap_opacity_r16(in brx_int3 in_opacity_texture_coordinates, in brx_float in_packed_opacity)
-{
-    brx_store_3d_float4(u_clipmap_texture_opacity_r16, in_opacity_texture_coordinates, brx_float4(in_packed_opacity, 0.0, 0.0, 0.0));
-}
-
-void brx_vct_application_bridge_set_clipmap_illumination_r16g16b16(in brx_int3 in_illumination_texture_coordinates, in brx_float3 in_packed_illumination)
-{
-    brx_store_3d_float4(u_clipmap_texture_illumination_r16g16b16, in_illumination_texture_coordinates, brx_float4(in_packed_illumination, 0.0));
+    brx_store_3d_float4(u_clipmap_texture_illumination_opacity_r16g16b16a16, in_illumination_opacity_texture_coordinates, in_illumination_opacity);
 }

@@ -395,7 +395,7 @@ brx_pixel_shader_parameter_end(main)
 
     out_direct_radiance = brx_float4(direct_radiance, surface_opacity);
 
-    out_ambient_radiance = brx_float4(ambient_radiance, 1.0);
+    out_ambient_radiance = brx_float4(ambient_radiance, surface_opacity);
 
     out_gbuffer_normal = brx_float4(brx_octahedral_map(surface_shading_normal_world_space), 0.0, 0.0);
     out_gbuffer_base_color = brx_float4(surface_base_color, 1.0);

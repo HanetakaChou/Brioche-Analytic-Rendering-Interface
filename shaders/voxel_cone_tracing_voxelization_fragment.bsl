@@ -256,42 +256,22 @@ brx_uint brx_vct_application_bridge_compare_and_swap_clipmap_mask(in brx_int3 in
     return brx_texture_3d_uint_interlocked_compare_exchange(u_clipmap_texture_mask, in_mask_texture_coordinates, in_old_value, in_new_value);
 }
 
-brx_uint brx_vct_application_bridge_get_clipmap_opacity(in brx_int3 in_opacity_texture_coordinates)
+brx_uint brx_vct_application_bridge_get_clipmap_illumination_opacity_red_green(in brx_int3 in_illumination_texture_coordinates)
 {
-    return brx_load_3d_uint(u_clipmap_texture_opacity_r32, in_opacity_texture_coordinates);
+    return brx_load_3d_uint(u_clipmap_texture_illumination_opacity_r16g16, in_illumination_texture_coordinates);
 }
 
-brx_uint brx_vct_application_bridge_compare_and_swap_clipmap_opacity(in brx_int3 in_opacity_texture_coordinates, in brx_uint in_old_value, in brx_uint in_new_value)
+brx_uint brx_vct_application_bridge_compare_and_swap_clipmap_illumination_opacity_red_green(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_old_value, in brx_uint in_new_value)
 {
-    return brx_texture_3d_uint_interlocked_compare_exchange(u_clipmap_texture_opacity_r32, in_opacity_texture_coordinates, in_old_value, in_new_value);
+    return brx_texture_3d_uint_interlocked_compare_exchange(u_clipmap_texture_illumination_opacity_r16g16, in_illumination_texture_coordinates, in_old_value, in_new_value);
 }
 
-brx_uint brx_vct_application_bridge_get_clipmap_illumination_red(in brx_int3 in_illumination_texture_coordinates)
+brx_uint brx_vct_application_bridge_get_clipmap_illumination_opacity_blue_alpha(in brx_int3 in_illumination_texture_coordinates)
 {
-    return brx_load_3d_uint(u_clipmap_texture_illumination_r32, in_illumination_texture_coordinates);
+    return brx_load_3d_uint(u_clipmap_texture_illumination_opacity_b16a16, in_illumination_texture_coordinates);
 }
 
-brx_uint brx_vct_application_bridge_compare_and_swap_clipmap_illumination_red(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_old_value, in brx_uint in_new_value)
+brx_uint brx_vct_application_bridge_compare_and_swap_clipmap_illumination_opacity_blue_alpha(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_old_value, in brx_uint in_new_value)
 {
-    return brx_texture_3d_uint_interlocked_compare_exchange(u_clipmap_texture_illumination_r32, in_illumination_texture_coordinates, in_old_value, in_new_value);
-}
-
-brx_uint brx_vct_application_bridge_get_clipmap_illumination_green(in brx_int3 in_illumination_texture_coordinates)
-{
-    return brx_load_3d_uint(u_clipmap_texture_illumination_g32, in_illumination_texture_coordinates);
-}
-
-brx_uint brx_vct_application_bridge_compare_and_swap_clipmap_illumination_green(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_old_value, in brx_uint in_new_value)
-{
-    return brx_texture_3d_uint_interlocked_compare_exchange(u_clipmap_texture_illumination_g32, in_illumination_texture_coordinates, in_old_value, in_new_value);
-}
-
-brx_uint brx_vct_application_bridge_get_clipmap_illumination_blue(in brx_int3 in_illumination_texture_coordinates)
-{
-    return brx_load_3d_uint(u_clipmap_texture_illumination_b32, in_illumination_texture_coordinates);
-}
-
-brx_uint brx_vct_application_bridge_compare_and_swap_clipmap_illumination_blue(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_old_value, in brx_uint in_new_value)
-{
-    return brx_texture_3d_uint_interlocked_compare_exchange(u_clipmap_texture_illumination_b32, in_illumination_texture_coordinates, in_old_value, in_new_value);
+    return brx_texture_3d_uint_interlocked_compare_exchange(u_clipmap_texture_illumination_opacity_b16a16, in_illumination_texture_coordinates, in_old_value, in_new_value);
 }

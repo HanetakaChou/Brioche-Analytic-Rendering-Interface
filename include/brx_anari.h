@@ -157,6 +157,7 @@ struct BRX_ANARI_SURFACE
 	brx_anari_surface_vertex_varying const *m_morph_targets_vertex_varyings[BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT];
 	uint32_t m_index_count;
 	uint32_t const *m_indices;
+	bool m_is_double_sided;
 	brx_anari_image *m_emissive_image;
 	brx_anari_vec3 m_emissive_factor;
 	brx_anari_image *m_normal_image;

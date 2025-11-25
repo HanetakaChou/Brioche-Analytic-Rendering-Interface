@@ -26,34 +26,19 @@ brx_uint brx_vct_application_bridge_get_clipmap_mask(in brx_int3 in_mask_texture
     return brx_load_3d_uint(u_clipmap_texture_mask, in_mask_texture_coordinates);
 }
 
-void brx_vct_application_bridge_set_clipmap_opacity_r32(in brx_int3 in_opacity_texture_coordinates, in brx_uint in_packed_opacity)
+void brx_vct_application_bridge_set_clipmap_illumination_opacity_r16g16(in brx_int3 in_illumination_opacity_texture_coordinates, in brx_uint in_packed_illumination_opacity_red_green)
 {
-    brx_store_3d_uint(u_clipmap_texture_opacity_r32, in_opacity_texture_coordinates, in_packed_opacity);
+    brx_store_3d_uint(u_clipmap_texture_illumination_opacity_r16g16, in_illumination_opacity_texture_coordinates, in_packed_illumination_opacity_red_green);
 }
 
-void brx_vct_application_bridge_set_clipmap_opacity_r16(in brx_int3 in_opacity_texture_coordinates, in brx_float in_packed_opacity)
+void brx_vct_application_bridge_set_clipmap_illumination_opacity_b16a16(in brx_int3 in_illumination_opacity_texture_coordinates, in brx_uint in_packed_illumination_opacity_blue_alpha)
 {
-    brx_store_3d_float4(u_clipmap_texture_opacity_r16, in_opacity_texture_coordinates, brx_float4(in_packed_opacity, 0.0, 0.0, 0.0));
+    brx_store_3d_uint(u_clipmap_texture_illumination_opacity_b16a16, in_illumination_opacity_texture_coordinates, in_packed_illumination_opacity_blue_alpha);
 }
 
-void brx_vct_application_bridge_set_clipmap_illumination_r32(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
+void brx_vct_application_bridge_set_clipmap_illumination_opacity_r16g16b16a16(in brx_int3 in_illumination_opacity_texture_coordinates, in brx_float4 in_illumination_opacity)
 {
-    brx_store_3d_uint(u_clipmap_texture_illumination_r32, in_illumination_texture_coordinates, in_packed_illumination);
-}
-
-void brx_vct_application_bridge_set_clipmap_illumination_g32(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
-{
-    brx_store_3d_uint(u_clipmap_texture_illumination_g32, in_illumination_texture_coordinates, in_packed_illumination);
-}
-
-void brx_vct_application_bridge_set_clipmap_illumination_b32(in brx_int3 in_illumination_texture_coordinates, in brx_uint in_packed_illumination)
-{
-    brx_store_3d_uint(u_clipmap_texture_illumination_b32, in_illumination_texture_coordinates, in_packed_illumination);
-}
-
-void brx_vct_application_bridge_set_clipmap_illumination_r16g16b16(in brx_int3 in_illumination_texture_coordinates, in brx_float3 in_packed_illumination)
-{
-    brx_store_3d_float4(u_clipmap_texture_illumination_r16g16b16, in_illumination_texture_coordinates, brx_float4(in_packed_illumination, 0.0));
+    brx_store_3d_float4(u_clipmap_texture_illumination_opacity_r16g16b16a16, in_illumination_opacity_texture_coordinates, in_illumination_opacity);
 }
 
 void brx_vct_application_bridge_set_clipmap_mask(in brx_int3 in_mask_texture_coordinates, in brx_uint in_mask)

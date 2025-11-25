@@ -222,7 +222,7 @@ void brx_anari_pal_device::release_surface_group(brx_anari_pal_surface_group *co
     {
         brx_anari_pal_surface_group *const delete_unwrapped_surface_group = release_unwrapped_surface_group;
 
-        auto const &found_surface_group = this->m_world_surface_group_instances.find(static_cast<brx_anari_pal_surface_group const *>(delete_unwrapped_surface_group));
+        auto const found_surface_group = this->m_world_surface_group_instances.find(static_cast<brx_anari_pal_surface_group const *>(delete_unwrapped_surface_group));
         if (this->m_world_surface_group_instances.end() != found_surface_group)
         {
             assert(found_surface_group->second.empty());
@@ -253,7 +253,7 @@ brx_anari_surface_group_instance *brx_anari_pal_device::world_new_surface_group_
     new_unwrapped_surface_group_instance->init(this, static_cast<brx_anari_pal_surface_group *>(surface_group));
 
     auto &surface_group_instances = this->m_world_surface_group_instances[surface_group];
-    auto const &found_surface_group_instance = surface_group_instances.find(new_unwrapped_surface_group_instance);
+    auto const found_surface_group_instance = surface_group_instances.find(new_unwrapped_surface_group_instance);
     assert(surface_group_instances.end() == found_surface_group_instance);
     surface_group_instances.emplace_hint(found_surface_group_instance, new_unwrapped_surface_group_instance);
 
@@ -265,7 +265,7 @@ void brx_anari_pal_device::world_release_surface_group_instance(brx_anari_surfac
     brx_anari_pal_surface_group_instance *const delete_unwrapped_surface_group_instance = static_cast<brx_anari_pal_surface_group_instance *>(wrapped_surface_group_instance);
 
     auto &surface_group_instances = this->m_world_surface_group_instances[static_cast<brx_anari_surface_group const *>(delete_unwrapped_surface_group_instance->get_surface_group())];
-    auto const &found_surface_group_instance = surface_group_instances.find(delete_unwrapped_surface_group_instance);
+    auto const found_surface_group_instance = surface_group_instances.find(delete_unwrapped_surface_group_instance);
     assert(surface_group_instances.end() != found_surface_group_instance);
     surface_group_instances.erase(found_surface_group_instance);
 
@@ -458,8 +458,7 @@ inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_
 
     uint32_t surface_auxiliary_buffer_texture_flags = 0U;
 
-    assert(0U == this->m_index_count);
-    this->m_index_count = surface->m_index_count;
+    // TODO: we may merge the mesh sections if the only difference of the materials is whether "double sided" is enabled
 
     // Index Buffer
     {
@@ -471,23 +470,103 @@ inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_
             raw_max_index = std::max(raw_max_index, raw_index);
         }
 
-        if (raw_max_index <= static_cast<uint32_t>(UINT16_MAX))
+        if (!surface->m_is_double_sided)
         {
-            surface_auxiliary_buffer_texture_flags |= SURFACE_BUFFER_FLAG_UINT16_INDEX;
+            assert(0U == this->m_index_count);
+            this->m_index_count = surface->m_index_count;
 
-            mcrt_vector<uint16_t> uint16_indices(static_cast<size_t>(surface->m_index_count));
-            for (uint32_t index_index = 0U; index_index < surface->m_index_count; ++index_index)
+            if (raw_max_index <= static_cast<uint32_t>(UINT16_MAX))
             {
-                uint16_indices[index_index] = static_cast<uint16_t>(surface->m_indices[index_index]);
-            }
+                surface_auxiliary_buffer_texture_flags |= SURFACE_BUFFER_FLAG_UINT16_INDEX;
 
-            assert(NULL == this->m_index_buffer);
-            this->m_index_buffer = device->internal_create_asset_buffer(uint16_indices.data(), sizeof(uint16_t) * surface->m_index_count);
+                mcrt_vector<uint16_t> uint16_indices(static_cast<size_t>(surface->m_index_count));
+                for (uint32_t index_index = 0U; index_index < surface->m_index_count; ++index_index)
+                {
+                    uint16_indices[index_index] = static_cast<uint16_t>(surface->m_indices[index_index]);
+                }
+
+                assert(NULL == this->m_index_buffer);
+                this->m_index_buffer = device->internal_create_asset_buffer(uint16_indices.data(), sizeof(uint16_t) * surface->m_index_count);
+            }
+            else
+            {
+                assert(NULL == this->m_index_buffer);
+                this->m_index_buffer = device->internal_create_asset_buffer(surface->m_indices, sizeof(uint32_t) * surface->m_index_count);
+            }
         }
         else
         {
-            assert(NULL == this->m_index_buffer);
-            this->m_index_buffer = device->internal_create_asset_buffer(surface->m_indices, sizeof(uint32_t) * surface->m_index_count);
+            assert(0U == (surface->m_index_count % 3U));
+            uint32_t const raw_face_count = surface->m_index_count / 3U;
+
+            uint32_t const new_index_count = 2U * 3U * raw_face_count;
+            assert((surface->m_index_count * 2U) == new_index_count);
+
+            assert(0U == this->m_index_count);
+            this->m_index_count = new_index_count;
+
+            if (raw_max_index <= static_cast<uint32_t>(UINT16_MAX))
+            {
+                surface_auxiliary_buffer_texture_flags |= SURFACE_BUFFER_FLAG_UINT16_INDEX;
+
+                mcrt_vector<uint16_t> new_uint16_indices(static_cast<size_t>(new_index_count));
+
+                for (uint32_t raw_face_index = 0U; raw_face_index < raw_face_count; ++raw_face_index)
+                {
+                    uint32_t const index_index_front_v0 = 6U * raw_face_index;
+                    uint32_t const index_index_front_v1 = 6U * raw_face_index + 1U;
+                    uint32_t const index_index_front_v2 = 6U * raw_face_index + 2U;
+
+                    uint32_t const index_index_back_v0 = 6U * raw_face_index + 3U;
+                    uint32_t const index_index_back_v1 = 6U * raw_face_index + 4U;
+                    uint32_t const index_index_back_v2 = 6U * raw_face_index + 5U;
+
+                    uint32_t const raw_index_index_v0 = 3U * raw_face_index;
+                    uint32_t const raw_index_index_v1 = 3U * raw_face_index + 1U;
+                    uint32_t const raw_index_index_v2 = 3U * raw_face_index + 2U;
+
+                    new_uint16_indices[index_index_front_v0] = static_cast<uint16_t>(surface->m_indices[raw_index_index_v0]);
+                    new_uint16_indices[index_index_front_v1] = static_cast<uint16_t>(surface->m_indices[raw_index_index_v1]);
+                    new_uint16_indices[index_index_front_v2] = static_cast<uint16_t>(surface->m_indices[raw_index_index_v2]);
+
+                    new_uint16_indices[index_index_back_v0] = static_cast<uint16_t>(surface->m_indices[raw_index_index_v2]);
+                    new_uint16_indices[index_index_back_v1] = static_cast<uint16_t>(surface->m_indices[raw_index_index_v1]);
+                    new_uint16_indices[index_index_back_v2] = static_cast<uint16_t>(surface->m_indices[raw_index_index_v0]);
+                }
+
+                assert(NULL == this->m_index_buffer);
+                this->m_index_buffer = device->internal_create_asset_buffer(new_uint16_indices.data(), sizeof(uint16_t) * new_index_count);
+            }
+            else
+            {
+                mcrt_vector<uint16_t> new_indices(static_cast<size_t>(new_index_count));
+
+                for (uint32_t raw_face_index = 0U; raw_face_index < raw_face_count; ++raw_face_index)
+                {
+                    uint32_t const index_index_front_v0 = 6U * raw_face_index;
+                    uint32_t const index_index_front_v1 = 6U * raw_face_index + 1U;
+                    uint32_t const index_index_front_v2 = 6U * raw_face_index + 2U;
+
+                    uint32_t const index_index_back_v0 = 6U * raw_face_index + 3U;
+                    uint32_t const index_index_back_v1 = 6U * raw_face_index + 4U;
+                    uint32_t const index_index_back_v2 = 6U * raw_face_index + 5U;
+
+                    uint32_t const raw_index_index_v0 = 3U * raw_face_index;
+                    uint32_t const raw_index_index_v1 = 3U * raw_face_index + 1U;
+                    uint32_t const raw_index_index_v2 = 3U * raw_face_index + 2U;
+
+                    new_indices[index_index_front_v0] = surface->m_indices[raw_index_index_v0];
+                    new_indices[index_index_front_v1] = surface->m_indices[raw_index_index_v1];
+                    new_indices[index_index_front_v2] = surface->m_indices[raw_index_index_v2];
+
+                    new_indices[index_index_back_v0] = surface->m_indices[raw_index_index_v2];
+                    new_indices[index_index_back_v1] = surface->m_indices[raw_index_index_v1];
+                    new_indices[index_index_back_v2] = surface->m_indices[raw_index_index_v0];
+                }
+
+                assert(NULL == this->m_index_buffer);
+                this->m_index_buffer = device->internal_create_asset_buffer(new_indices.data(), sizeof(uint32_t) * new_index_count);
+            }
         }
     }
 

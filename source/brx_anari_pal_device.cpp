@@ -161,7 +161,7 @@ brx_anari_pal_device::brx_anari_pal_device()
 #ifndef NDEBUG
       m_renderer_gi_quality_lock(false),
 #endif
-      m_renderer_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY_LOW)
+      m_renderer_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY_DISABLE)
 {
 }
 

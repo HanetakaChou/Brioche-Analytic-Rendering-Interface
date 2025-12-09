@@ -137,108 +137,108 @@ all : \
 
 $(DXIL_DIR)/_internal_full_screen_transfer_vertex.inl $(DXIL_DIR)/_internal_full_screen_transfer_vertex.d : $(SHADERS_DIR)/full_screen_transfer_vertex.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -MD -MF "$(DXIL_DIR)/_internal_full_screen_transfer_vertex.d" -Fo "$(DXIL_DIR)/_internal_full_screen_transfer_vertex.inl" "$(SHADERS_DIR)/full_screen_transfer_vertex.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -Fh "$(DXIL_DIR)/_internal_full_screen_transfer_vertex.inl" -Vn "full_screen_transfer_vertex_shader_module_code" "$(SHADERS_DIR)/full_screen_transfer_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -MD -MF "$(DXIL_DIR)/_internal_full_screen_transfer_vertex.d" -Fo "$(DXIL_DIR)/_internal_full_screen_transfer_vertex.inl" "$(SHADERS_DIR)/full_screen_transfer_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -Fh "$(DXIL_DIR)/_internal_full_screen_transfer_vertex.inl" -Vn "full_screen_transfer_vertex_shader_module_code" "$(SHADERS_DIR)/full_screen_transfer_vertex.bsl"
 
 $(DXIL_DIR)/_internal_full_screen_transfer_fragment.inl $(DXIL_DIR)/_internal_full_screen_transfer_fragment.d : $(SHADERS_DIR)/full_screen_transfer_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -MD -MF "$(DXIL_DIR)/_internal_full_screen_transfer_fragment.d" -Fo "$(DXIL_DIR)/_internal_full_screen_transfer_fragment.inl" "$(SHADERS_DIR)/full_screen_transfer_fragment.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -Fh "$(DXIL_DIR)/_internal_full_screen_transfer_fragment.inl" -Vn "full_screen_transfer_fragment_shader_module_code" "$(SHADERS_DIR)/full_screen_transfer_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -MD -MF "$(DXIL_DIR)/_internal_full_screen_transfer_fragment.d" -Fo "$(DXIL_DIR)/_internal_full_screen_transfer_fragment.inl" "$(SHADERS_DIR)/full_screen_transfer_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -Fh "$(DXIL_DIR)/_internal_full_screen_transfer_fragment.inl" -Vn "full_screen_transfer_fragment_shader_module_code" "$(SHADERS_DIR)/full_screen_transfer_fragment.bsl"
 
 $(DXIL_DIR)/_internal_deforming_compute.inl $(DXIL_DIR)/_internal_deforming_compute.d : $(SHADERS_DIR)/deforming_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_deforming_compute.d" -Fo "$(DXIL_DIR)/_internal_deforming_compute.inl" "$(SHADERS_DIR)/deforming_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_deforming_compute.inl" -Vn "deforming_compute_shader_module_code" "$(SHADERS_DIR)/deforming_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_deforming_compute.d" -Fo "$(DXIL_DIR)/_internal_deforming_compute.inl" "$(SHADERS_DIR)/deforming_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_deforming_compute.inl" -Vn "deforming_compute_shader_module_code" "$(SHADERS_DIR)/deforming_compute.bsl"
 
 $(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl $(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d : $(SHADERS_DIR)/environment_lighting_sh_projection_environment_map_clear_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl" "$(SHADERS_DIR)/environment_lighting_sh_projection_environment_map_clear_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl" -Vn "environment_lighting_sh_projection_environment_map_clear_compute_shader_module_code" "$(SHADERS_DIR)/environment_lighting_sh_projection_environment_map_clear_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl" "$(SHADERS_DIR)/environment_lighting_sh_projection_environment_map_clear_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl" -Vn "environment_lighting_sh_projection_environment_map_clear_compute_shader_module_code" "$(SHADERS_DIR)/environment_lighting_sh_projection_environment_map_clear_compute.bsl"
 
 $(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl $(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.d : $(SHADERS_DIR)/environment_lighting_sh_projection_equirectangular_environment_map_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl" "$(SHADERS_DIR)/environment_lighting_sh_projection_equirectangular_environment_map_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl" -Vn "environment_lighting_sh_projection_equirectangular_environment_map_compute_shader_module_code" "$(SHADERS_DIR)/environment_lighting_sh_projection_equirectangular_environment_map_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl" "$(SHADERS_DIR)/environment_lighting_sh_projection_equirectangular_environment_map_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl" -Vn "environment_lighting_sh_projection_equirectangular_environment_map_compute_shader_module_code" "$(SHADERS_DIR)/environment_lighting_sh_projection_equirectangular_environment_map_compute.bsl"
 
 $(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl $(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.d : $(SHADERS_DIR)/environment_lighting_sh_projection_octahedral_environment_map_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl" "$(SHADERS_DIR)/environment_lighting_sh_projection_octahedral_environment_map_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl" -Vn "environment_lighting_sh_projection_octahedral_environment_map_compute_shader_module_code" "$(SHADERS_DIR)/environment_lighting_sh_projection_octahedral_environment_map_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl" "$(SHADERS_DIR)/environment_lighting_sh_projection_octahedral_environment_map_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl" -Vn "environment_lighting_sh_projection_octahedral_environment_map_compute_shader_module_code" "$(SHADERS_DIR)/environment_lighting_sh_projection_octahedral_environment_map_compute.bsl"
 
 $(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.inl $(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.d : $(SHADERS_DIR)/environment_lighting_skybox_vertex.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.inl" "$(SHADERS_DIR)/environment_lighting_skybox_vertex.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -Fh "$(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.inl" -Vn "environment_lighting_skybox_vertex_shader_module_code" "$(SHADERS_DIR)/environment_lighting_skybox_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.inl" "$(SHADERS_DIR)/environment_lighting_skybox_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -Fh "$(DXIL_DIR)/_internal_environment_lighting_skybox_vertex.inl" -Vn "environment_lighting_skybox_vertex_shader_module_code" "$(SHADERS_DIR)/environment_lighting_skybox_vertex.bsl"
 
 $(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.inl $(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.d : $(SHADERS_DIR)/environment_lighting_skybox_equirectangular_map_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.inl" "$(SHADERS_DIR)/environment_lighting_skybox_equirectangular_map_fragment.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -Fh "$(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.inl" -Vn "environment_lighting_skybox_equirectangular_map_fragment_shader_module_code" "$(SHADERS_DIR)/environment_lighting_skybox_equirectangular_map_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.inl" "$(SHADERS_DIR)/environment_lighting_skybox_equirectangular_map_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -Fh "$(DXIL_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.inl" -Vn "environment_lighting_skybox_equirectangular_map_fragment_shader_module_code" "$(SHADERS_DIR)/environment_lighting_skybox_equirectangular_map_fragment.bsl"
 
 $(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl $(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.d : $(SHADERS_DIR)/environment_lighting_skybox_octahedral_map_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl" "$(SHADERS_DIR)/environment_lighting_skybox_octahedral_map_fragment.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -Fh "$(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl" -Vn "environment_lighting_skybox_octahedral_map_fragment_shader_module_code" "$(SHADERS_DIR)/environment_lighting_skybox_octahedral_map_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -MD -MF "$(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.d" -Fo "$(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl" "$(SHADERS_DIR)/environment_lighting_skybox_octahedral_map_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -Fh "$(DXIL_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl" -Vn "environment_lighting_skybox_octahedral_map_fragment_shader_module_code" "$(SHADERS_DIR)/environment_lighting_skybox_octahedral_map_fragment.bsl"
 
 $(DXIL_DIR)/_internal_forward_shading_vertex.inl $(DXIL_DIR)/_internal_forward_shading_vertex.d : $(SHADERS_DIR)/forward_shading_vertex.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -MD -MF "$(DXIL_DIR)/_internal_forward_shading_vertex.d" -Fo "$(DXIL_DIR)/_internal_forward_shading_vertex.inl" "$(SHADERS_DIR)/forward_shading_vertex.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -Fh "$(DXIL_DIR)/_internal_forward_shading_vertex.inl" -Vn "forward_shading_vertex_shader_module_code" "$(SHADERS_DIR)/forward_shading_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -MD -MF "$(DXIL_DIR)/_internal_forward_shading_vertex.d" -Fo "$(DXIL_DIR)/_internal_forward_shading_vertex.inl" "$(SHADERS_DIR)/forward_shading_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -Fh "$(DXIL_DIR)/_internal_forward_shading_vertex.inl" -Vn "forward_shading_vertex_shader_module_code" "$(SHADERS_DIR)/forward_shading_vertex.bsl"
 
 $(DXIL_DIR)/_internal_forward_shading_fragment.inl $(DXIL_DIR)/_internal_forward_shading_fragment.d : $(SHADERS_DIR)/forward_shading_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -MD -MF "$(DXIL_DIR)/_internal_forward_shading_fragment.d" -Fo "$(DXIL_DIR)/_internal_forward_shading_fragment.inl" "$(SHADERS_DIR)/forward_shading_fragment.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -Fh "$(DXIL_DIR)/_internal_forward_shading_fragment.inl" -Vn "forward_shading_fragment_shader_module_code" "$(SHADERS_DIR)/forward_shading_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -MD -MF "$(DXIL_DIR)/_internal_forward_shading_fragment.d" -Fo "$(DXIL_DIR)/_internal_forward_shading_fragment.inl" "$(SHADERS_DIR)/forward_shading_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -Fh "$(DXIL_DIR)/_internal_forward_shading_fragment.inl" -Vn "forward_shading_fragment_shader_module_code" "$(SHADERS_DIR)/forward_shading_fragment.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_zero_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_zero_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.inl" -Vn "voxel_cone_tracing_zero_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_zero_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_zero_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_zero_compute.inl" -Vn "voxel_cone_tracing_zero_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_zero_compute.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_clear_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_clear_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.inl" -Vn "voxel_cone_tracing_clear_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_clear_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_clear_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_clear_compute.inl" -Vn "voxel_cone_tracing_clear_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_clear_compute.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d : $(SHADERS_DIR)/voxel_cone_tracing_voxelization_vertex.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_vertex.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl" -Vn "voxel_cone_tracing_voxelization_vertex_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl" -Vn "voxel_cone_tracing_voxelization_vertex_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_vertex.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d : $(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl" -Vn "voxel_cone_tracing_voxelization_fragment_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_voxelization_fragment.inl" -Vn "voxel_cone_tracing_voxelization_fragment_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_fragment.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl" -Vn "voxel_cone_tracing_pack_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_pack_compute.inl" -Vn "voxel_cone_tracing_pack_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_pack_compute.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl" -Vn "voxel_cone_tracing_cone_tracing_low_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_low_compute.inl" -Vn "voxel_cone_tracing_cone_tracing_low_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_low_compute.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_medium_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_medium_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl" -Vn "voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_medium_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_medium_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_medium_compute.inl" -Vn "voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_medium_compute.bsl"
 
 $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl $(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.d : $(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_high_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_high_compute.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_8 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl" -Vn "voxel_cone_tracing_cone_tracing_high_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_high_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.d" -Fo "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_high_compute.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_voxel_cone_tracing_cone_tracing_high_compute.inl" -Vn "voxel_cone_tracing_cone_tracing_high_compute_shader_module_code" "$(SHADERS_DIR)/voxel_cone_tracing_cone_tracing_high_compute.bsl"
 
 $(DXIL_DIR)/_internal_post_processing_vertex.inl $(DXIL_DIR)/_internal_post_processing_vertex.d : $(SHADERS_DIR)/post_processing_vertex.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -MD -MF "$(DXIL_DIR)/_internal_post_processing_vertex.d" -Fo "$(DXIL_DIR)/_internal_post_processing_vertex.inl" "$(SHADERS_DIR)/post_processing_vertex.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_8 -Fh "$(DXIL_DIR)/_internal_post_processing_vertex.inl" -Vn "post_processing_vertex_shader_module_code" "$(SHADERS_DIR)/post_processing_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -MD -MF "$(DXIL_DIR)/_internal_post_processing_vertex.d" -Fo "$(DXIL_DIR)/_internal_post_processing_vertex.inl" "$(SHADERS_DIR)/post_processing_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -Fh "$(DXIL_DIR)/_internal_post_processing_vertex.inl" -Vn "post_processing_vertex_shader_module_code" "$(SHADERS_DIR)/post_processing_vertex.bsl"
 
 $(DXIL_DIR)/_internal_post_processing_fragment.inl $(DXIL_DIR)/_internal_post_processing_fragment.d : $(SHADERS_DIR)/post_processing_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -MD -MF "$(DXIL_DIR)/_internal_post_processing_fragment.d" -Fo "$(DXIL_DIR)/_internal_post_processing_fragment.inl" "$(SHADERS_DIR)/post_processing_fragment.bsl"
-	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_8 -Fh "$(DXIL_DIR)/_internal_post_processing_fragment.inl" -Vn "post_processing_fragment_shader_module_code" "$(SHADERS_DIR)/post_processing_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -MD -MF "$(DXIL_DIR)/_internal_post_processing_fragment.d" -Fo "$(DXIL_DIR)/_internal_post_processing_fragment.inl" "$(SHADERS_DIR)/post_processing_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -Fh "$(DXIL_DIR)/_internal_post_processing_fragment.inl" -Vn "post_processing_fragment_shader_module_code" "$(SHADERS_DIR)/post_processing_fragment.bsl"
 
 -include \
 	$(DXIL_DIR)/_internal_full_screen_transfer_vertex.d \

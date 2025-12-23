@@ -1767,9 +1767,6 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
             command_buffer->set_scissor(0, 0, this->m_intermediate_width, this->m_intermediate_height);
 
-            // HDRI Light Skybox
-            this->hdri_light_render_skybox(this->m_frame_throttling_index, command_buffer, this->m_hdri_light_layout);
-
             // Forward Shading
             {
                 command_buffer->bind_graphics_pipeline(this->m_forward_shading_pipeline);
@@ -1812,6 +1809,9 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                     }
                 }
             }
+
+            // HDRI Light Skybox
+            this->hdri_light_render_skybox(this->m_frame_throttling_index, command_buffer, this->m_hdri_light_layout);
 
             command_buffer->end_render_pass();
 

@@ -450,46 +450,60 @@ DirectX::XMFLOAT4X4 brx_anari_pal_device::voxel_cone_tracing_get_clipmap_stack_l
 
 void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_voxel_cone_tracing_dirty, BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality)
 {
+    if (inout_voxel_cone_tracing_dirty)
+    {
+        graphics_command_buffer->begin_debug_utils_label("Voxel Cone Tracing Zero Pass");
+
+        {
+            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16b16a16};
+
+            graphics_command_buffer->storage_resource_load_dont_care(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
+        }
+
+        graphics_command_buffer->bind_compute_pipeline(this->m_voxel_cone_tracing_zero_pipeline);
+
+        {
+            brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
+
+            uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
+
+            graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+        }
+
+        {
+            DirectX::XMUINT3 const dispatch_extent = brx_voxel_cone_tracing_zero_dispatch_extent();
+
+            graphics_command_buffer->dispatch(dispatch_extent.x, dispatch_extent.y, dispatch_extent.z);
+        }
+
+        {
+            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16b16a16};
+
+            graphics_command_buffer->storage_resource_store(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
+        }
+
+        {
+            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion};
+
+            graphics_command_buffer->storage_resource_load_dont_care(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
+        }
+
+        // TODO: zero pass
+
+        {
+            brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion};
+
+            graphics_command_buffer->storage_resource_store(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
+        }
+
+        graphics_command_buffer->end_debug_utils_label();
+
+        inout_voxel_cone_tracing_dirty = false;
+    }
+
     if ((BRX_ANARI_RENDERER_GI_QUALITY_LOW == renderer_gi_quality) || (BRX_ANARI_RENDERER_GI_QUALITY_MEDIUM == renderer_gi_quality) || (BRX_ANARI_RENDERER_GI_QUALITY_HIGH == renderer_gi_quality))
     {
         graphics_command_buffer->begin_debug_utils_label("Voxel Cone Tracing Pass");
-
-        if (inout_voxel_cone_tracing_dirty)
-        {
-            graphics_command_buffer->begin_debug_utils_label("Voxel Cone Tracing Zero Pass");
-
-            {
-                brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16b16a16};
-
-                graphics_command_buffer->storage_resource_load_dont_care(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
-            }
-
-            graphics_command_buffer->bind_compute_pipeline(this->m_voxel_cone_tracing_zero_pipeline);
-
-            {
-                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
-
-                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
-
-                graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
-            }
-
-            {
-                DirectX::XMUINT3 const dispatch_extent = brx_voxel_cone_tracing_zero_dispatch_extent();
-
-                graphics_command_buffer->dispatch(dispatch_extent.x, dispatch_extent.y, dispatch_extent.z);
-            }
-
-            {
-                brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16b16a16};
-
-                graphics_command_buffer->storage_resource_store(0U, NULL, sizeof(storage_images) / sizeof(storage_images[0]), storage_images);
-            }
-
-            graphics_command_buffer->end_debug_utils_label();
-
-            inout_voxel_cone_tracing_dirty = false;
-        }
 
         {
             brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16, this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16b16a16};

@@ -36,6 +36,6 @@ brx_vertex_shader_parameter_end(main)
         brx_float2(0.0, -1.0)
         brx_array_constructor_end;
 
-	brx_position = brx_float4(full_screen_triangle_positions[brx_vertex_index], 0.5, 1.0);
+	brx_position = brx_float4(full_screen_triangle_positions[brx_vertex_index], 0.0, 1.0);
     out_uv = full_screen_triangle_uvs[brx_vertex_index];
 }

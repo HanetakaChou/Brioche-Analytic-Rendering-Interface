@@ -221,8 +221,8 @@ public:
 	virtual float camera_get_near() const = 0;
 	virtual float camera_get_far() const = 0;
 
-	virtual void frame_attach_window(void *wsi_window) = 0;
-	virtual void frame_resize_window() = 0;
+	virtual void frame_attach_window(void *wsi_window, float intermediate_width_scale, float intermediate_height_scale) = 0;
+	virtual void frame_resize_window(float intermediate_width_scale, float intermediate_height_scale) = 0;
 	virtual void frame_detach_window() = 0;
 
 	virtual void renderer_render_frame(bool ui_view) = 0;

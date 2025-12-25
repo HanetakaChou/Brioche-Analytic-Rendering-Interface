@@ -101,7 +101,12 @@ endif
 ifeq ($(OS),Windows_NT)
 	GLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../shaderc/bin/win32/x64/glslc.exe)
 else
-	GLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../shaderc/bin/linux/x64/glslc)
+	UNAME := $(strip $(shell uname -s 2>/dev/null))
+	ifeq ($(UNAME),Darwin)
+		GLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../shaderc/bin/macos/x86_64/glslc)
+	else
+		GLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../shaderc/bin/linux/x86_64/glslc)
+	endif
 endif
 
 GLSL_COMPILER_FLAGS :=

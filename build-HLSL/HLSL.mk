@@ -101,7 +101,12 @@ endif
 ifeq ($(OS),Windows_NT)
 	HLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/win32/x64/dxc.exe)
 else
-	HLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/linux/x64/dxc)
+	UNAME := $(strip $(shell uname -s 2>/dev/null))
+	ifeq ($(UNAME),Darwin)
+		HLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/macos/x86_64/dxc)
+	else
+		HLSL_COMPILER_PATH := $(realpath $(LOCAL_PATH)/../../DirectXShaderCompiler/bin/linux/x86_64/dxc)
+	endif
 endif
 
 HLSL_COMPILER_DEBUG_FLAGS :=

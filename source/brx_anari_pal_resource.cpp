@@ -401,6 +401,16 @@ void brx_anari_pal_device::init_place_holder_resource()
     this->m_device->destroy_upload_queue(upload_queue);
 
     this->m_device->destroy_graphics_queue(graphics_queue);
+
+    constexpr BRX_PAL_STORAGE_IMAGE_FORMAT const place_holder_storage_image_format = BRX_PAL_STORAGE_IMAGE_FORMAT_R32_UINT;
+    constexpr uint32_t const place_holder_storage_image_width = 1U;
+    constexpr uint32_t const place_holder_storage_image_height = 1U;
+    constexpr bool const place_holder_storage_image_volume = false;
+    constexpr uint32_t const place_holder_storage_image_depth = 1U;
+    constexpr bool const place_holder_storage_image_allow_sampled_image = false;
+
+    assert(NULL == this->m_place_holder_storage_image);
+    this->m_place_holder_storage_image = this->m_device->create_storage_image(place_holder_storage_image_format, place_holder_storage_image_width, place_holder_storage_image_height, place_holder_storage_image_volume, place_holder_storage_image_depth, place_holder_storage_image_allow_sampled_image);
 }
 
 static inline uint32_t internal_align_up(uint32_t value, uint32_t alignment)

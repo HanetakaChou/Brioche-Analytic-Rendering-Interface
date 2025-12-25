@@ -21,8 +21,9 @@ brx_root_signature(full_screen_transfer_root_signature_macro, full_screen_transf
 brx_early_depth_stencil
 brx_pixel_shader_parameter_begin(main)
 brx_pixel_shader_parameter_in_frag_coord brx_pixel_shader_parameter_split
+brx_pixel_shader_parameter_in(brx_float2, in_interpolated_texcoord, 0) brx_pixel_shader_parameter_split
 brx_pixel_shader_parameter_out(brx_float4, out_display_color, 0)
 brx_pixel_shader_parameter_end(main)
 {
-	out_display_color = brx_fetch_2d(g_display_color_image, brx_int3(brx_frag_coord.xy, 0));
+	out_display_color = brx_sample_2d(t_display_color_texture, s_sampler, in_interpolated_texcoord);
 }

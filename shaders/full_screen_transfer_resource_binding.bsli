@@ -20,11 +20,13 @@
 
 #include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
 
-brx_texture_2d(g_display_color_image, 0, 0);
+brx_sampler_state(s_sampler, 0, 0);
+brx_texture_2d(t_display_color_texture, 0, 1);
 
-#define full_screen_transfer_root_signature_macro                                       \
-    brx_root_signature_root_parameter_begin(full_screen_transfer_root_signature_name)   \
-    brx_root_signature_root_descriptor_table_srv(0, 0, 1)                               \
+#define full_screen_transfer_root_signature_macro                                                       \
+    brx_root_signature_root_parameter_begin(full_screen_transfer_root_signature_name)                   \
+    brx_root_signature_root_descriptor_table_sampler(0, 0, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_descriptor_table_srv(0, 1, 1) brx_root_signature_root_parameter_split       \
     brx_root_signature_root_parameter_end
 
 #endif

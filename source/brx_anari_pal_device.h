@@ -65,6 +65,7 @@ class brx_anari_pal_device final : public brx_anari_device
 	brx_pal_pipeline_layout *m_environment_lighting_pipeline_layout;
 	// ---
 	brx_pal_uniform_upload_buffer *m_forward_shading_none_update_set_uniform_buffer;
+	brx_pal_descriptor_set_layout *m_forward_shading_descriptor_set_layout_none_update;
 	brx_pal_descriptor_set *m_forward_shading_descriptor_set_none_update;
 	brx_pal_descriptor_set_layout *m_forward_shading_descriptor_set_layout_per_surface_group_update;
 	brx_pal_descriptor_set_layout *m_forward_shading_descriptor_set_layout_per_surface_update;
@@ -142,6 +143,7 @@ class brx_anari_pal_device final : public brx_anari_device
 
 	brx_pal_storage_asset_buffer *m_place_holder_asset_buffer;
 	brx_pal_sampled_asset_image *m_place_holder_asset_image;
+	brx_pal_storage_image *m_place_holder_storage_image;
 
 	mcrt_unordered_map<brx_anari_surface_group const *, mcrt_set<brx_anari_surface_group_instance const *>> m_world_surface_group_instances;
 
@@ -289,8 +291,8 @@ private:
 
 	inline void create_swap_chain_compatible_render_pass_and_pipeline();
 	inline void destroy_swap_chain_compatible_render_pass_and_pipeline();
-	inline void attach_swap_chain();
-	inline void detach_swap_chain();
+	inline void attach_swap_chain(BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
+	inline void detach_swap_chain(BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
 
 	void hdri_light_create_none_update_binding_resource();
 	void hdri_light_destroy_none_update_binding_resource();
@@ -305,8 +307,9 @@ private:
 	void hdri_light_render_sh_projection(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_hdri_light_sh_dirty, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout);
 	void hdri_light_render_skybox(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout);
 
-	void voxel_cone_tracing_create_none_update_binding_resource();
-	void voxel_cone_tracing_destroy_none_update_binding_resource();
+	void voxel_cone_tracing_write_quality_dependent_place_holder_none_update_descriptor();
+	void voxel_cone_tracing_create_quality_dependent_none_update_binding_resource();
+	void voxel_cone_tracing_destroy_quality_dependent_none_update_binding_resource();
 	void voxel_cone_tracing_create_screen_size_dependent_none_update_binding_resource();
 	void voxel_cone_tracing_destroy_screen_size_dependent_none_update_binding_resource();
 	void voxel_cone_tracing_create_pipeline();

@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "post_processing_resource_binding.bsli"
+#include "none_update_resource_binding.bsli"
 
 brx_root_signature(post_processing_root_signature_macro, post_processing_root_signature_name)
 brx_early_depth_stencil
@@ -41,7 +41,7 @@ brx_pixel_shader_parameter_end(main)
     brx_float ambient_occlusion;
     brx_branch if ((RENDERER_GI_QUALITY_LOW == g_renderer_gi_quality) || (RENDERER_GI_QUALITY_MEDIUM == g_renderer_gi_quality) || (RENDERER_GI_QUALITY_HIGH == g_renderer_gi_quality))
     {
-        brx_float4 indirect_radiance_and_ambient_occlusion = brx_sample_2d(t_indirect_radiance_and_ambient_occlusion, s_sampler, in_interpolated_texcoord);
+        brx_float4 indirect_radiance_and_ambient_occlusion = brx_sample_2d(t_indirect_radiance_and_ambient_occlusion, s_clamp_sampler, in_interpolated_texcoord);
         indirect_radiance = indirect_radiance_and_ambient_occlusion.xyz;
         ambient_occlusion = indirect_radiance_and_ambient_occlusion.w;
     }

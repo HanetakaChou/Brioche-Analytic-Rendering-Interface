@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "environment_lighting_resource_binding.bsli"
+#include "none_update_resource_binding.bsli"
 #include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_projection_environment_map_clear.bsli"
 
 void brx_sh_application_bridge_set_environment_map_sh_coefficient(in brx_int in_environment_map_sh_coefficient_monochromatic_index, in brx_uint in_sh_coefficient)

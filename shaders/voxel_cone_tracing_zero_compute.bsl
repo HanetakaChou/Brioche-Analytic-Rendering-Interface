@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "post_processing_resource_binding.bsli"
+#include "none_update_resource_binding.bsli"
 #define BRX_VCT_ENABLE_ILLUMINATION 1
 #include "../../Voxel-Cone-Tracing/shaders/brx_voxel_cone_tracing_zero_compute.bsli"
 

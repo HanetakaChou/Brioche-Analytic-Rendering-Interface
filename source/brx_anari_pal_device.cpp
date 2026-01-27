@@ -23,9 +23,9 @@
 #include <new>
 #include "../../Brioche-Platform-Abstraction-Layer/include/brx_pal_device.h"
 #include "../../Brioche-ImGui/backends/imgui_impl_brx.h"
-#include "../shaders/deforming_resource_binding.bsli"
-#include "../shaders/forward_shading_resource_binding.bsli"
-#include "../shaders/post_processing_resource_binding.bsli"
+#include "../shaders/none_update_resource_binding.bsli"
+#include "../shaders/deforming_surface_resource_binding.bsli"
+#include "../shaders/surface_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/include/brx_reversed_z.h"
 #include "../../DLB/DLB.h"
 
@@ -55,23 +55,16 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_uniform_upload_buffer_offset_alignment(0U),
       m_shared_none_update_set_linear_wrap_sampler(NULL),
       m_shared_none_update_set_linear_clamp_sampler(NULL),
-      m_deforming_descriptor_set_layout_per_surface_group_update(NULL),
-      m_deforming_descriptor_set_layout_per_surface_update(NULL),
-      m_deforming_pipeline_layout(NULL),
-      m_environment_lighting_none_update_set_uniform_buffer(NULL),
-      m_environment_lighting_descriptor_set_none_update(NULL),
-      m_environment_lighting_descriptor_set_layout_per_environment_lighting_update(NULL),
-      m_environment_lighting_pipeline_layout(NULL),
-      m_forward_shading_none_update_set_uniform_buffer(NULL),
-      m_forward_shading_descriptor_set_layout_none_update(NULL),
-      m_forward_shading_descriptor_set_none_update(NULL),
-      m_forward_shading_descriptor_set_layout_per_surface_group_update(NULL),
-      m_forward_shading_descriptor_set_layout_per_surface_update(NULL),
-      m_forward_shading_pipeline_layout(NULL),
-      m_post_processing_none_update_set_uniform_buffer(NULL),
-      m_post_processing_descriptor_set_layout_none_update(NULL),
-      m_post_processing_descriptor_set_none_update(NULL),
-      m_post_processing_pipeline_layout(NULL),
+      m_none_update_descriptor_set_uniform_buffer(NULL),
+      m_none_update_descriptor_set_layout(NULL),
+      m_none_update_descriptor_set(NULL),
+      m_none_update_pipeline_layout(NULL),
+      m_deforming_surface_group_update_descriptor_set_layout(NULL),
+      m_deforming_surface_update_descriptor_set_layout(NULL),
+      m_deforming_surface_update_pipeline_layout(NULL),
+      m_surface_group_update_descriptor_set_layout(NULL),
+      m_surface_update_descriptor_set_layout(NULL),
+      m_surface_update_pipeline_layout(NULL),
       m_deforming_pipeline(NULL),
       m_environment_lighting_sh_projection_clear_pipeline(NULL),
       m_environment_lighting_sh_projection_equirectangular_map_pipeline(NULL),
@@ -125,12 +118,16 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_frame_throttling_index_lock(false),
 #endif
       m_frame_throttling_index(BRX_ANARI_UINT32_INDEX_INVALID),
-      m_lut_specular_hdr_fresnel_factors_asset_image(NULL),
-      m_lut_specular_transfer_function_sh_coefficients_asset_image(NULL),
+      m_lut_specular_hdr_fresnel_factor_asset_image(NULL),
+      m_lut_specular_ltc_matrix_asset_image(NULL),
+      m_lut_specular_transfer_function_sh_coefficient_asset_image(NULL),
       m_place_holder_asset_buffer(NULL),
       m_place_holder_asset_image(NULL),
       m_place_holder_storage_image(NULL),
       m_world_surface_group_instances{},
+      m_quad_lights{},
+      m_area_lighting_emissive_pipeline(NULL),
+      m_quad_lights_enable_debug_renderer(true),
       m_hdri_light_radiance(NULL),
 #ifndef NDEBUG
       m_hdri_light_layout_lock(false),
@@ -143,7 +140,6 @@ brx_anari_pal_device::brx_anari_pal_device()
 #endif
       m_hdri_light_dirty(true),
       m_hdri_light_environment_map_sh_coefficients(NULL),
-      m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update(NULL),
 #ifndef NDEBUG
       m_voxel_cone_tracing_dirty_lock(false),
 #endif
@@ -175,23 +171,16 @@ brx_anari_pal_device::~brx_anari_pal_device()
     assert(0U == this->m_uniform_upload_buffer_offset_alignment);
     assert(NULL == this->m_shared_none_update_set_linear_wrap_sampler);
     assert(NULL == this->m_shared_none_update_set_linear_clamp_sampler);
-    assert(NULL == this->m_deforming_descriptor_set_layout_per_surface_group_update);
-    assert(NULL == this->m_deforming_descriptor_set_layout_per_surface_update);
-    assert(NULL == this->m_deforming_pipeline_layout);
-    assert(NULL == this->m_environment_lighting_none_update_set_uniform_buffer);
-    assert(NULL == this->m_environment_lighting_descriptor_set_none_update);
-    assert(NULL == this->m_environment_lighting_descriptor_set_layout_per_environment_lighting_update);
-    assert(NULL == this->m_environment_lighting_pipeline_layout);
-    assert(NULL == this->m_forward_shading_none_update_set_uniform_buffer);
-    assert(NULL == this->m_forward_shading_descriptor_set_layout_none_update);
-    assert(NULL == this->m_forward_shading_descriptor_set_none_update);
-    assert(NULL == this->m_forward_shading_descriptor_set_layout_per_surface_group_update);
-    assert(NULL == this->m_forward_shading_descriptor_set_layout_per_surface_update);
-    assert(NULL == this->m_forward_shading_pipeline_layout);
-    assert(NULL == this->m_post_processing_none_update_set_uniform_buffer);
-    assert(NULL == this->m_post_processing_descriptor_set_layout_none_update);
-    assert(NULL == this->m_post_processing_descriptor_set_none_update);
-    assert(NULL == this->m_post_processing_pipeline_layout);
+    assert(NULL == this->m_deforming_surface_group_update_descriptor_set_layout);
+    assert(NULL == this->m_deforming_surface_update_descriptor_set_layout);
+    assert(NULL == this->m_deforming_surface_update_pipeline_layout);
+    assert(NULL == this->m_surface_group_update_descriptor_set_layout);
+    assert(NULL == this->m_surface_update_descriptor_set_layout);
+    assert(NULL == this->m_surface_update_pipeline_layout);
+    assert(NULL == this->m_none_update_descriptor_set_uniform_buffer);
+    assert(NULL == this->m_none_update_descriptor_set_layout);
+    assert(NULL == this->m_none_update_descriptor_set);
+    assert(NULL == this->m_none_update_pipeline_layout);
     assert(NULL == this->m_deforming_pipeline);
     assert(NULL == this->m_environment_lighting_sh_projection_clear_pipeline);
     assert(NULL == this->m_environment_lighting_sh_projection_equirectangular_map_pipeline);
@@ -243,16 +232,17 @@ brx_anari_pal_device::~brx_anari_pal_device()
         assert(NULL == this->m_graphics_command_buffers[frame_throttling_index]);
     }
     assert(BRX_ANARI_UINT32_INDEX_INVALID == this->m_frame_throttling_index);
-    assert(NULL == this->m_lut_specular_hdr_fresnel_factors_asset_image);
-    assert(NULL == this->m_lut_specular_transfer_function_sh_coefficients_asset_image);
+    assert(NULL == this->m_lut_specular_hdr_fresnel_factor_asset_image);
+    assert(NULL == this->m_lut_specular_ltc_matrix_asset_image);
+    assert(NULL == this->m_lut_specular_transfer_function_sh_coefficient_asset_image);
     assert(NULL == this->m_place_holder_asset_buffer);
     assert(NULL == this->m_place_holder_asset_image);
     assert(this->m_world_surface_group_instances.empty());
-    assert(this->m_world_surface_group_instances.empty());
+    // assert(this->m_quad_lights.empty());
+    assert(NULL == this->m_area_lighting_emissive_pipeline);
     assert(NULL == this->m_hdri_light_radiance);
     assert(BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED == this->m_hdri_light_layout);
     assert(NULL == this->m_hdri_light_environment_map_sh_coefficients);
-    assert(NULL == this->m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update);
     assert(NULL == this->m_voxel_cone_tracing_clipmap_mask);
     assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16);
     assert(NULL == this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16);
@@ -303,116 +293,20 @@ void brx_anari_pal_device::init(void *wsi_connection)
 
         // Descriptor/Pipeline Layout and None Update Descriptor
         {
-            // Deforming Descriptor/Pipeline Layout
+            // None Update Descriptor/Pipeline Layout
             {
-                assert(NULL == this->m_deforming_descriptor_set_layout_per_surface_group_update);
-                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const deforming_pipeline_descriptor_set_layout_per_surface_group_update_bindings[] = {
-                    {0U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U}};
-                this->m_deforming_descriptor_set_layout_per_surface_group_update = this->m_device->create_descriptor_set_layout(sizeof(deforming_pipeline_descriptor_set_layout_per_surface_group_update_bindings) / sizeof(deforming_pipeline_descriptor_set_layout_per_surface_group_update_bindings[0]), deforming_pipeline_descriptor_set_layout_per_surface_group_update_bindings);
-
-                assert(NULL == this->m_deforming_descriptor_set_layout_per_surface_update);
-                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const deforming_pipeline_descriptor_set_layout_per_surface_update_bindings[] = {
-                    {0U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT},
-                    {1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_BUFFER, DEFORMING_SURFACE_OUTPUT_BUFFER_COUNT}};
-                this->m_deforming_descriptor_set_layout_per_surface_update = this->m_device->create_descriptor_set_layout(sizeof(deforming_pipeline_descriptor_set_layout_per_surface_update_bindings) / sizeof(deforming_pipeline_descriptor_set_layout_per_surface_update_bindings[0]), deforming_pipeline_descriptor_set_layout_per_surface_update_bindings);
-
-                assert(NULL == this->m_deforming_pipeline_layout);
-                brx_pal_descriptor_set_layout *const deforming_pipeline_descriptor_set_layouts[] = {
-                    this->m_deforming_descriptor_set_layout_per_surface_group_update,
-                    this->m_deforming_descriptor_set_layout_per_surface_update};
-                this->m_deforming_pipeline_layout = this->m_device->create_pipeline_layout(sizeof(deforming_pipeline_descriptor_set_layouts) / sizeof(deforming_pipeline_descriptor_set_layouts[0]), deforming_pipeline_descriptor_set_layouts);
-            }
-
-            this->hdri_light_create_none_update_descriptor();
-
-            // Forward Shading Descriptor/Pipeline Layout
-            {
-                assert(NULL == this->m_forward_shading_descriptor_set_layout_none_update);
-                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const forward_shading_descriptor_set_layout_none_update_bindings[] = {
-                    {0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
-                    {1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
-                    {2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
-                    {3U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
-                    {4U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U},
-                    {5U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 1U},
-                    {6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
-                this->m_forward_shading_descriptor_set_layout_none_update = this->m_device->create_descriptor_set_layout(sizeof(forward_shading_descriptor_set_layout_none_update_bindings) / sizeof(forward_shading_descriptor_set_layout_none_update_bindings[0]), forward_shading_descriptor_set_layout_none_update_bindings);
-
-                assert(NULL == this->m_forward_shading_descriptor_set_layout_per_surface_group_update);
-                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const forward_shading_descriptor_set_layout_per_surface_group_update_bindings[] = {
-                    {0U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U}};
-                this->m_forward_shading_descriptor_set_layout_per_surface_group_update = this->m_device->create_descriptor_set_layout(sizeof(forward_shading_descriptor_set_layout_per_surface_group_update_bindings) / sizeof(forward_shading_descriptor_set_layout_per_surface_group_update_bindings[0]), forward_shading_descriptor_set_layout_per_surface_group_update_bindings);
-
-                assert(NULL == this->m_forward_shading_descriptor_set_layout_per_surface_update);
-                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const forward_shading_descriptor_set_layout_per_surface_update_bindings[] = {
-                    {0U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, FORWARD_SHADING_SURFACE_BUFFER_COUNT},
-                    {4U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, FORWARD_SHADING_SURFACE_TEXTURE_COUNT}};
-                this->m_forward_shading_descriptor_set_layout_per_surface_update = this->m_device->create_descriptor_set_layout(sizeof(forward_shading_descriptor_set_layout_per_surface_update_bindings) / sizeof(forward_shading_descriptor_set_layout_per_surface_update_bindings[0]), forward_shading_descriptor_set_layout_per_surface_update_bindings);
-
-                assert(NULL == this->m_forward_shading_pipeline_layout);
-                brx_pal_descriptor_set_layout *const forward_shading_pipeline_descriptor_set_layouts[] = {
-                    this->m_forward_shading_descriptor_set_layout_none_update,
-                    this->m_forward_shading_descriptor_set_layout_per_surface_group_update,
-                    this->m_forward_shading_descriptor_set_layout_per_surface_update};
-                this->m_forward_shading_pipeline_layout = this->m_device->create_pipeline_layout(sizeof(forward_shading_pipeline_descriptor_set_layouts) / sizeof(forward_shading_pipeline_descriptor_set_layouts[0]), forward_shading_pipeline_descriptor_set_layouts);
-            }
-
-            // Forward Shading None Update Uniform Buffer
-            {
-                assert(NULL == this->m_forward_shading_none_update_set_uniform_buffer);
-                this->m_forward_shading_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<forward_shading_none_update_set_uniform_buffer_binding>());
-            }
-
-            // Forward Shading None Update Descriptor
-            {
-                assert(NULL == this->m_forward_shading_descriptor_set_none_update);
-                this->m_forward_shading_descriptor_set_none_update = this->m_device->create_descriptor_set(this->m_forward_shading_descriptor_set_layout_none_update, 0U);
-            }
-
-            // Write Forward Shading None Update Descriptor
-            {
-                {
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
-                }
-
-                {
-                    constexpr uint32_t const dynamic_uniform_buffers_range = sizeof(forward_shading_none_update_set_uniform_buffer_binding);
-
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &this->m_forward_shading_none_update_set_uniform_buffer, &dynamic_uniform_buffers_range, NULL, NULL, NULL, NULL, NULL, NULL);
-                }
-
-                {
-                    assert(NULL != this->m_hdri_light_environment_map_sh_coefficients);
-                    brx_pal_read_only_storage_buffer const *buffers[] = {this->m_hdri_light_environment_map_sh_coefficients->get_read_only_storage_buffer()};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 5U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 0U, sizeof(buffers) / sizeof(buffers[0]), NULL, NULL, buffers, NULL, NULL, NULL, NULL, NULL);
-                }
-
-                {
-                    brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_hdr_fresnel_factors_asset_image->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 6U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
-                }
-
-                {
-                    brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_transfer_function_sh_coefficients_asset_image->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
-                }
-            }
-
-            // Post Processing Descriptor/Pipeline Layout
-            {
-                assert(NULL == this->m_post_processing_descriptor_set_layout_none_update);
-                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const post_processing_pipeline_none_update_descriptor_set_layout_bindings[] = {
-                    {0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
+                assert(NULL == this->m_none_update_descriptor_set_layout);
+                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const none_update_pipeline_none_update_descriptor_set_layout_bindings[] = {
+                    {0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1U},
                     {1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
-                    {5U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
+                    {5U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1U},
                     {6U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U},
-                    {7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {7U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 1U},
+                    {8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
+                    {9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 1U},
                     {10U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
                     {11U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
                     {12U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
@@ -420,38 +314,117 @@ void brx_anari_pal_device::init(void *wsi_connection)
                     {14U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
                     {15U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
                     {16U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
-                    {17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
-                this->m_post_processing_descriptor_set_layout_none_update = this->m_device->create_descriptor_set_layout(sizeof(post_processing_pipeline_none_update_descriptor_set_layout_bindings) / sizeof(post_processing_pipeline_none_update_descriptor_set_layout_bindings[0]), post_processing_pipeline_none_update_descriptor_set_layout_bindings);
+                    {17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {18U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {19U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {20U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {21U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {22U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {23U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U},
+                    {24U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1U}};
+                this->m_none_update_descriptor_set_layout = this->m_device->create_descriptor_set_layout(sizeof(none_update_pipeline_none_update_descriptor_set_layout_bindings) / sizeof(none_update_pipeline_none_update_descriptor_set_layout_bindings[0]), none_update_pipeline_none_update_descriptor_set_layout_bindings);
 
-                assert(NULL == this->m_post_processing_pipeline_layout);
-                brx_pal_descriptor_set_layout *const post_processing_pipeline_descriptor_set_layouts[] = {
-                    this->m_post_processing_descriptor_set_layout_none_update};
-                this->m_post_processing_pipeline_layout = this->m_device->create_pipeline_layout(sizeof(post_processing_pipeline_descriptor_set_layouts) / sizeof(post_processing_pipeline_descriptor_set_layouts[0]), post_processing_pipeline_descriptor_set_layouts);
+                assert(NULL == this->m_none_update_pipeline_layout);
+                brx_pal_descriptor_set_layout *const none_update_pipeline_descriptor_set_layouts[] = {
+                    this->m_none_update_descriptor_set_layout};
+                this->m_none_update_pipeline_layout = this->m_device->create_pipeline_layout(sizeof(none_update_pipeline_descriptor_set_layouts) / sizeof(none_update_pipeline_descriptor_set_layouts[0]), none_update_pipeline_descriptor_set_layouts);
             }
 
-            // Post Processing None Update Uniform Buffer
+            // None Update Uniform Buffer
             {
-                assert(NULL == this->m_post_processing_none_update_set_uniform_buffer);
+                assert(NULL == this->m_none_update_descriptor_set_uniform_buffer);
 
-                this->m_post_processing_none_update_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<post_processing_none_update_set_uniform_buffer_binding>());
+                this->m_none_update_descriptor_set_uniform_buffer = this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<none_update_set_uniform_buffer_binding>());
             }
 
-            // Post Processing None Update Descriptor
+            // None Update Descriptor
             {
-                assert(NULL == this->m_post_processing_descriptor_set_none_update);
-                this->m_post_processing_descriptor_set_none_update = this->m_device->create_descriptor_set(this->m_post_processing_descriptor_set_layout_none_update, 0U);
+                assert(NULL == this->m_none_update_descriptor_set);
+                this->m_none_update_descriptor_set = this->m_device->create_descriptor_set(this->m_none_update_descriptor_set_layout, 0U);
             }
 
-            // Write Post Processing None Update Descriptor
+            // Write None Update Descriptor
             {
                 {
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 5U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_clamp_sampler, NULL);
+                    assert(NULL != this->m_hdri_light_environment_map_sh_coefficients);
+                    brx_pal_storage_buffer const *buffers[] = {this->m_hdri_light_environment_map_sh_coefficients->get_storage_buffer()};
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_BUFFER, 0U, sizeof(buffers) / sizeof(buffers[0]), NULL, NULL, NULL, buffers, NULL, NULL, NULL, NULL);
                 }
 
                 {
-                    constexpr uint32_t const dynamic_uniform_buffers_range = sizeof(post_processing_none_update_set_uniform_buffer_binding);
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 6U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &this->m_post_processing_none_update_set_uniform_buffer, &dynamic_uniform_buffers_range, NULL, NULL, NULL, NULL, NULL, NULL);
+                    constexpr uint32_t const dynamic_uniform_buffers_range = sizeof(none_update_set_uniform_buffer_binding);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 6U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &this->m_none_update_descriptor_set_uniform_buffer, &dynamic_uniform_buffers_range, NULL, NULL, NULL, NULL, NULL, NULL);
                 }
+
+                {
+                    assert(NULL != this->m_hdri_light_environment_map_sh_coefficients);
+                    brx_pal_read_only_storage_buffer const *buffers[] = {this->m_hdri_light_environment_map_sh_coefficients->get_read_only_storage_buffer()};
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 7U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 0U, sizeof(buffers) / sizeof(buffers[0]), NULL, NULL, buffers, NULL, NULL, NULL, NULL, NULL);
+                }
+
+                {
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
+                }
+
+                {
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_clamp_sampler, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_hdr_fresnel_factor_asset_image->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 10U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_ltc_matrix_asset_image->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 11U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+
+                {
+                    brx_pal_sampled_image const *const sampled_images[] = {this->m_lut_specular_transfer_function_sh_coefficient_asset_image->get_sampled_image()};
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 12U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                }
+            }
+
+            // Deforming Surface Update Descriptor/Pipeline Layout
+            {
+                assert(NULL == this->m_deforming_surface_group_update_descriptor_set_layout);
+                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const deforming_surface_update_pipeline_descriptor_set_layout_per_surface_group_update_bindings[] = {
+                    {0U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U}};
+                this->m_deforming_surface_group_update_descriptor_set_layout = this->m_device->create_descriptor_set_layout(sizeof(deforming_surface_update_pipeline_descriptor_set_layout_per_surface_group_update_bindings) / sizeof(deforming_surface_update_pipeline_descriptor_set_layout_per_surface_group_update_bindings[0]), deforming_surface_update_pipeline_descriptor_set_layout_per_surface_group_update_bindings);
+
+                assert(NULL == this->m_deforming_surface_update_descriptor_set_layout);
+                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const deforming_surface_update_pipeline_descriptor_set_layout_per_surface_update_bindings[] = {
+                    {0U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT},
+                    {1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_BUFFER, DEFORMING_SURFACE_OUTPUT_BUFFER_COUNT}};
+                this->m_deforming_surface_update_descriptor_set_layout = this->m_device->create_descriptor_set_layout(sizeof(deforming_surface_update_pipeline_descriptor_set_layout_per_surface_update_bindings) / sizeof(deforming_surface_update_pipeline_descriptor_set_layout_per_surface_update_bindings[0]), deforming_surface_update_pipeline_descriptor_set_layout_per_surface_update_bindings);
+
+                assert(NULL == this->m_deforming_surface_update_pipeline_layout);
+                brx_pal_descriptor_set_layout *const deforming_surface_update_pipeline_descriptor_set_layouts[] = {
+                    this->m_deforming_surface_group_update_descriptor_set_layout,
+                    this->m_deforming_surface_update_descriptor_set_layout};
+                this->m_deforming_surface_update_pipeline_layout = this->m_device->create_pipeline_layout(sizeof(deforming_surface_update_pipeline_descriptor_set_layouts) / sizeof(deforming_surface_update_pipeline_descriptor_set_layouts[0]), deforming_surface_update_pipeline_descriptor_set_layouts);
+            }
+
+            // Surface Update Descriptor/Pipeline Layout
+            {
+                assert(NULL == this->m_surface_group_update_descriptor_set_layout);
+                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const surface_update_descriptor_set_layout_per_surface_group_update_bindings[] = {
+                    {0U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 1U}};
+                this->m_surface_group_update_descriptor_set_layout = this->m_device->create_descriptor_set_layout(sizeof(surface_update_descriptor_set_layout_per_surface_group_update_bindings) / sizeof(surface_update_descriptor_set_layout_per_surface_group_update_bindings[0]), surface_update_descriptor_set_layout_per_surface_group_update_bindings);
+
+                assert(NULL == this->m_surface_update_descriptor_set_layout);
+                BRX_PAL_DESCRIPTOR_SET_LAYOUT_BINDING const surface_update_descriptor_set_layout_per_surface_update_bindings[] = {
+                    {0U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, FORWARD_SHADING_SURFACE_BUFFER_COUNT},
+                    {4U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, FORWARD_SHADING_SURFACE_TEXTURE_COUNT}};
+                this->m_surface_update_descriptor_set_layout = this->m_device->create_descriptor_set_layout(sizeof(surface_update_descriptor_set_layout_per_surface_update_bindings) / sizeof(surface_update_descriptor_set_layout_per_surface_update_bindings[0]), surface_update_descriptor_set_layout_per_surface_update_bindings);
+
+                assert(NULL == this->m_surface_update_pipeline_layout);
+                brx_pal_descriptor_set_layout *const surface_update_pipeline_descriptor_set_layouts[] = {
+                    this->m_none_update_descriptor_set_layout,
+                    this->m_surface_group_update_descriptor_set_layout,
+                    this->m_surface_update_descriptor_set_layout};
+                this->m_surface_update_pipeline_layout = this->m_device->create_pipeline_layout(sizeof(surface_update_pipeline_descriptor_set_layouts) / sizeof(surface_update_pipeline_descriptor_set_layouts[0]), surface_update_pipeline_descriptor_set_layouts);
             }
         }
 
@@ -465,13 +438,13 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
                 {
 #include "../shaders/spirv/deforming_compute.inl"
-                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
+                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_surface_update_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
                 }
 #elif defined(__MACH__)
                 assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
                 {
 #include "../shaders/spirv/deforming_compute.inl"
-                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
+                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_surface_update_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
                 }
 #else
 #error Unknown Platform
@@ -482,13 +455,13 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 case BRX_PAL_BACKEND_NAME_D3D12:
                 {
 #include "../shaders/dxil/deforming_compute.inl"
-                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
+                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_surface_update_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
                 }
                 break;
                 case BRX_PAL_BACKEND_NAME_VK:
                 {
 #include "../shaders/spirv/deforming_compute.inl"
-                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
+                    this->m_deforming_pipeline = this->m_device->create_compute_pipeline(this->m_deforming_surface_update_pipeline_layout, sizeof(deforming_compute_shader_module_code), deforming_compute_shader_module_code);
                 }
                 break;
                 default:
@@ -542,14 +515,14 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 {
 #include "../shaders/spirv/forward_shading_vertex.inl"
 #include "../shaders/spirv/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_forward_shading_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
 #elif defined(__MACH__)
                 assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
                 {
 #include "../shaders/spirv/forward_shading_vertex.inl"
 #include "../shaders/spirv/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_forward_shading_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
 #else
 #error Unknown Platform
@@ -561,14 +534,14 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 {
 #include "../shaders/dxil/forward_shading_vertex.inl"
 #include "../shaders/dxil/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_forward_shading_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
                 break;
                 case BRX_PAL_BACKEND_NAME_VK:
                 {
 #include "../shaders/spirv/forward_shading_vertex.inl"
 #include "../shaders/spirv/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_forward_shading_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
                 break;
                 default:
@@ -580,6 +553,8 @@ void brx_anari_pal_device::init(void *wsi_connection)
 #error Unknown Compiler
 #endif
             }
+
+            this->quad_light_create_pipeline();
 
             this->hdri_light_create_pipeline();
 
@@ -604,14 +579,14 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 {
 #include "../shaders/spirv/post_processing_vertex.inl"
 #include "../shaders/spirv/post_processing_fragment.inl"
-                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_post_processing_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_none_update_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
                 }
 #elif defined(__MACH__)
                 assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
                 {
 #include "../shaders/spirv/post_processing_vertex.inl"
 #include "../shaders/spirv/post_processing_fragment.inl"
-                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_post_processing_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_none_update_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
                 }
 #else
 #error Unknown Platform
@@ -623,14 +598,14 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 {
 #include "../shaders/dxil/post_processing_vertex.inl"
 #include "../shaders/dxil/post_processing_fragment.inl"
-                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_post_processing_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_none_update_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
                 }
                 break;
                 case BRX_PAL_BACKEND_NAME_VK:
                 {
 #include "../shaders/spirv/post_processing_vertex.inl"
 #include "../shaders/spirv/post_processing_fragment.inl"
-                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_post_processing_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+                    this->m_post_processing_pipeline = this->m_device->create_graphics_pipeline(this->m_post_processing_render_pass, this->m_none_update_pipeline_layout, sizeof(post_processing_vertex_shader_module_code), post_processing_vertex_shader_module_code, sizeof(post_processing_fragment_shader_module_code), post_processing_fragment_shader_module_code, false, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
                 }
                 break;
                 default:
@@ -716,16 +691,15 @@ void brx_anari_pal_device::init(void *wsi_connection)
 
     assert(BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED == this->m_hdri_light_layout);
 
-    assert(NULL != this->m_place_holder_asset_image);
-    this->hdri_light_create_per_environment_lighting_descriptor((NULL != this->m_hdri_light_radiance) ? static_cast<brx_anari_pal_image *>(this->m_hdri_light_radiance)->get_image()->get_sampled_image() : this->m_place_holder_asset_image->get_sampled_image());
+    this->hdri_light_write_place_holder_none_update_descriptor();
+
+    assert(BRX_ANARI_RENDERER_GI_QUALITY_DISABLE == this->m_renderer_gi_quality);
 
     this->voxel_cone_tracing_write_quality_dependent_place_holder_none_update_descriptor();
 }
 
 void brx_anari_pal_device::uninit()
 {
-    this->hdri_light_destroy_per_environment_lighting_descriptor();
-
     this->m_hdri_light_layout = BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED;
 
     if (NULL != this->m_hdri_light_radiance)
@@ -743,13 +717,17 @@ void brx_anari_pal_device::uninit()
 
     assert(this->m_world_surface_group_instances.empty());
 
-    assert(NULL != this->m_lut_specular_hdr_fresnel_factors_asset_image);
-    this->helper_destroy_asset_image(this->m_lut_specular_hdr_fresnel_factors_asset_image);
-    this->m_lut_specular_hdr_fresnel_factors_asset_image = NULL;
+    assert(NULL != this->m_lut_specular_hdr_fresnel_factor_asset_image);
+    this->helper_destroy_asset_image(this->m_lut_specular_hdr_fresnel_factor_asset_image);
+    this->m_lut_specular_hdr_fresnel_factor_asset_image = NULL;
 
-    assert(NULL != this->m_lut_specular_transfer_function_sh_coefficients_asset_image);
-    this->helper_destroy_asset_image(this->m_lut_specular_transfer_function_sh_coefficients_asset_image);
-    this->m_lut_specular_transfer_function_sh_coefficients_asset_image = NULL;
+    assert(NULL != this->m_lut_specular_ltc_matrix_asset_image);
+    this->helper_destroy_asset_image(this->m_lut_specular_ltc_matrix_asset_image);
+    this->m_lut_specular_ltc_matrix_asset_image = NULL;
+
+    assert(NULL != this->m_lut_specular_transfer_function_sh_coefficient_asset_image);
+    this->helper_destroy_asset_image(this->m_lut_specular_transfer_function_sh_coefficient_asset_image);
+    this->m_lut_specular_transfer_function_sh_coefficient_asset_image = NULL;
 
     assert(NULL != this->m_place_holder_asset_buffer);
     this->helper_destroy_asset_buffer(this->m_place_holder_asset_buffer);
@@ -834,14 +812,14 @@ void brx_anari_pal_device::uninit()
 
         // Descriptor/Pipeline Layout and None Update Descriptor
         {
-            //  None Update Descriptor
+            // None Update Descriptor
             {
                 assert(NULL != this->m_full_screen_transfer_descriptor_set_none_update);
                 this->m_device->destroy_descriptor_set(this->m_full_screen_transfer_descriptor_set_none_update);
                 this->m_full_screen_transfer_descriptor_set_none_update = NULL;
             }
 
-            // Deforming Descriptor/Pipeline Layout
+            // Deforming Surface Descriptor/Pipeline Layout
             {
                 assert(NULL != this->m_full_screen_transfer_pipeline_layout);
                 this->m_device->destroy_pipeline_layout(this->m_full_screen_transfer_pipeline_layout);
@@ -862,6 +840,8 @@ void brx_anari_pal_device::uninit()
         // Render Pass and Pipeline
         {
             this->voxel_cone_tracing_destroy_pipeline();
+
+            this->quad_light_destroy_pipeline();
 
             this->hdri_light_destroy_pipeline();
 
@@ -891,79 +871,59 @@ void brx_anari_pal_device::uninit()
 
         // Descriptor/Pipeline Layout and None Update Descriptor
         {
-            // Deforming Descriptor/Pipeline Layout
+            // Deforming Surface Descriptor/Pipeline Layout
             {
-                assert(NULL != this->m_deforming_pipeline_layout);
-                this->m_device->destroy_pipeline_layout(this->m_deforming_pipeline_layout);
-                this->m_deforming_pipeline_layout = NULL;
+                assert(NULL != this->m_deforming_surface_update_pipeline_layout);
+                this->m_device->destroy_pipeline_layout(this->m_deforming_surface_update_pipeline_layout);
+                this->m_deforming_surface_update_pipeline_layout = NULL;
 
-                assert(NULL != this->m_deforming_descriptor_set_layout_per_surface_group_update);
-                this->m_device->destroy_descriptor_set_layout(this->m_deforming_descriptor_set_layout_per_surface_group_update);
-                this->m_deforming_descriptor_set_layout_per_surface_group_update = NULL;
+                assert(NULL != this->m_deforming_surface_group_update_descriptor_set_layout);
+                this->m_device->destroy_descriptor_set_layout(this->m_deforming_surface_group_update_descriptor_set_layout);
+                this->m_deforming_surface_group_update_descriptor_set_layout = NULL;
 
-                assert(NULL != this->m_deforming_descriptor_set_layout_per_surface_update);
-                this->m_device->destroy_descriptor_set_layout(this->m_deforming_descriptor_set_layout_per_surface_update);
-                this->m_deforming_descriptor_set_layout_per_surface_update = NULL;
+                assert(NULL != this->m_deforming_surface_update_descriptor_set_layout);
+                this->m_device->destroy_descriptor_set_layout(this->m_deforming_surface_update_descriptor_set_layout);
+                this->m_deforming_surface_update_descriptor_set_layout = NULL;
             }
 
-            this->hdri_light_destroy_none_update_descriptor();
-
-            // Forward Shading Descriptor/Pipeline Layout
+            // Surface Descriptor/Pipeline Layout
             {
-                assert(NULL != this->m_forward_shading_pipeline_layout);
-                this->m_device->destroy_pipeline_layout(this->m_forward_shading_pipeline_layout);
-                this->m_forward_shading_pipeline_layout = NULL;
+                assert(NULL != this->m_surface_update_pipeline_layout);
+                this->m_device->destroy_pipeline_layout(this->m_surface_update_pipeline_layout);
+                this->m_surface_update_pipeline_layout = NULL;
 
-                assert(NULL != this->m_forward_shading_descriptor_set_layout_per_surface_group_update);
-                this->m_device->destroy_descriptor_set_layout(this->m_forward_shading_descriptor_set_layout_per_surface_group_update);
-                this->m_forward_shading_descriptor_set_layout_per_surface_group_update = NULL;
+                assert(NULL != this->m_surface_group_update_descriptor_set_layout);
+                this->m_device->destroy_descriptor_set_layout(this->m_surface_group_update_descriptor_set_layout);
+                this->m_surface_group_update_descriptor_set_layout = NULL;
 
-                assert(NULL != this->m_forward_shading_descriptor_set_layout_per_surface_update);
-                this->m_device->destroy_descriptor_set_layout(this->m_forward_shading_descriptor_set_layout_per_surface_update);
-                this->m_forward_shading_descriptor_set_layout_per_surface_update = NULL;
+                assert(NULL != this->m_surface_update_descriptor_set_layout);
+                this->m_device->destroy_descriptor_set_layout(this->m_surface_update_descriptor_set_layout);
+                this->m_surface_update_descriptor_set_layout = NULL;
             }
 
-            // Forward Shading None Update Descriptor
+            // None Update Descriptor/Pipeline Layout
             {
-                assert(NULL != this->m_forward_shading_descriptor_set_none_update);
-                this->m_device->destroy_descriptor_set(this->m_forward_shading_descriptor_set_none_update);
-                this->m_forward_shading_descriptor_set_none_update = NULL;
+                assert(NULL != this->m_none_update_pipeline_layout);
+                this->m_device->destroy_pipeline_layout(this->m_none_update_pipeline_layout);
+                this->m_none_update_pipeline_layout = NULL;
 
-                assert(NULL != this->m_forward_shading_descriptor_set_layout_none_update);
-                this->m_device->destroy_descriptor_set_layout(this->m_forward_shading_descriptor_set_layout_none_update);
-                this->m_forward_shading_descriptor_set_layout_none_update = NULL;
+                assert(NULL != this->m_none_update_descriptor_set_layout);
+                this->m_device->destroy_descriptor_set_layout(this->m_none_update_descriptor_set_layout);
+                this->m_none_update_descriptor_set_layout = NULL;
             }
 
-            // Forward Shading None Update Uniform Buffer
+            // None Update Descriptor
             {
-                assert(NULL != this->m_forward_shading_none_update_set_uniform_buffer);
-                this->m_device->destroy_uniform_upload_buffer(this->m_forward_shading_none_update_set_uniform_buffer);
-                this->m_forward_shading_none_update_set_uniform_buffer = NULL;
+                assert(NULL != this->m_none_update_descriptor_set);
+                this->m_device->destroy_descriptor_set(this->m_none_update_descriptor_set);
+                this->m_none_update_descriptor_set = NULL;
             }
 
-            // Post Processing Descriptor/Pipeline Layout
+            // None Update Uniform Buffer
             {
-                assert(NULL != this->m_post_processing_pipeline_layout);
-                this->m_device->destroy_pipeline_layout(this->m_post_processing_pipeline_layout);
-                this->m_post_processing_pipeline_layout = NULL;
-
-                assert(NULL != this->m_post_processing_descriptor_set_layout_none_update);
-                this->m_device->destroy_descriptor_set_layout(this->m_post_processing_descriptor_set_layout_none_update);
-                this->m_post_processing_descriptor_set_layout_none_update = NULL;
-            }
-
-            // Post Processing None Update Descriptor
-            {
-                assert(NULL != this->m_post_processing_descriptor_set_none_update);
-                this->m_device->destroy_descriptor_set(this->m_post_processing_descriptor_set_none_update);
-                this->m_post_processing_descriptor_set_none_update = NULL;
-            }
-
-            // Post Processing None Update Uniform Buffer
-            {
-                assert(NULL != this->m_post_processing_none_update_set_uniform_buffer);
-                this->m_device->destroy_uniform_upload_buffer(this->m_post_processing_none_update_set_uniform_buffer);
-                this->m_post_processing_none_update_set_uniform_buffer = NULL;
+                assert(NULL != this->m_none_update_descriptor_set_uniform_buffer);
+                this->m_device->destroy_uniform_upload_buffer(this->m_none_update_descriptor_set_uniform_buffer);
+                this->m_none_update_descriptor_set_uniform_buffer = NULL;
             }
         }
 
@@ -1299,7 +1259,7 @@ inline void brx_anari_pal_device::attach_swap_chain(BRX_ANARI_RENDERER_GI_QUALIT
             // Post Process
             {
                 // The VkDescriptorSetLayout should still be valid when perform write update on VkDescriptorSet
-                assert(NULL != this->m_post_processing_descriptor_set_layout_none_update);
+                assert(NULL != this->m_none_update_descriptor_set_layout);
                 {
                     {
                         brx_pal_storage_image const *storage_images[1] = {NULL};
@@ -1312,37 +1272,37 @@ inline void brx_anari_pal_device::attach_swap_chain(BRX_ANARI_RENDERER_GI_QUALIT
                             assert(BRX_ANARI_RENDERER_GI_QUALITY_DISABLE == renderer_gi_quality);
                             storage_images[0] = this->m_place_holder_storage_image;
                         }
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 5U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                     }
 
                     {
                         brx_pal_sampled_image const *const sampled_images[] = {this->m_direct_radiance_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 7U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 14U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
                         brx_pal_sampled_image const *const sampled_images[] = {this->m_ambient_radiance_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 8U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 15U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
                         brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_normal_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 9U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 16U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
                         brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_base_color_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 10U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
                         brx_pal_sampled_image const *const sampled_images[] = {this->m_gbuffer_roughness_metallic_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 11U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 18U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
                         brx_pal_sampled_image const *const sampled_images[] = {this->m_scene_depth_image->get_sampled_image()};
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 12U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 19U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
 
                     {
@@ -1356,7 +1316,7 @@ inline void brx_anari_pal_device::attach_swap_chain(BRX_ANARI_RENDERER_GI_QUALIT
                             assert(BRX_ANARI_RENDERER_GI_QUALITY_DISABLE == renderer_gi_quality);
                             sampled_images[0] = this->m_place_holder_asset_image->get_sampled_image();
                         }
-                        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 24U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                     }
                 }
             }
@@ -1545,15 +1505,11 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
         // TODO: Frustum Culling
 
-        // Update Camera
+        // Upload Camera
         DirectX::XMFLOAT4X4 camera_view_transform;
         DirectX::XMFLOAT4X4 camera_projection_transform;
         DirectX::XMFLOAT4X4 camera_inverse_view_transform;
         DirectX::XMFLOAT4X4 camera_inverse_projection_transform;
-        DirectX::XMFLOAT3 voxel_cone_tracing_clipmap_anchor;
-        DirectX::XMFLOAT3 voxel_cone_tracing_clipmap_center;
-        DirectX::XMFLOAT4X4 voxel_cone_tracing_viewport_depth_direction_view_matrices[BRX_VCT_VIEWPORT_DEPTH_DIRECTION_COUNT];
-        DirectX::XMFLOAT4X4 voxel_cone_tracing_clipmap_stack_level_projection_matrices[BRX_VCT_CLIPMAP_STACK_LEVEL_COUNT];
         {
             {
                 DirectX::XMFLOAT3 const camera_position(this->m_camera_position.m_x, this->m_camera_position.m_y, this->m_camera_position.m_z);
@@ -1566,20 +1522,6 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                 DirectX::XMVECTOR unused_determinant;
                 DirectX::XMMATRIX simd_inverse_view_transform = DirectX::XMMatrixInverse(&unused_determinant, simd_camera_view_transform);
                 DirectX::XMStoreFloat4x4(&camera_inverse_view_transform, simd_inverse_view_transform);
-
-                voxel_cone_tracing_clipmap_anchor = this->voxel_cone_tracing_get_clipmap_anchor(camera_position, camera_direction);
-
-                voxel_cone_tracing_clipmap_center = this->voxel_cone_tracing_get_clipmap_center(voxel_cone_tracing_clipmap_anchor);
-
-                for (uint32_t viewport_depth_direction_index = 0U; viewport_depth_direction_index < static_cast<uint32_t>(BRX_VCT_VIEWPORT_DEPTH_DIRECTION_COUNT); ++viewport_depth_direction_index)
-                {
-                    voxel_cone_tracing_viewport_depth_direction_view_matrices[viewport_depth_direction_index] = this->voxel_cone_tracing_get_viewport_depth_direction_view_matrix(voxel_cone_tracing_clipmap_center, viewport_depth_direction_index);
-                }
-
-                for (uint32_t stack_level = 0U; stack_level < static_cast<uint32_t>(BRX_VCT_CLIPMAP_STACK_LEVEL_COUNT); ++stack_level)
-                {
-                    voxel_cone_tracing_clipmap_stack_level_projection_matrices[stack_level] = this->voxel_cone_tracing_get_clipmap_stack_level_projection_matrix(stack_level);
-                }
             }
 
             {
@@ -1594,9 +1536,18 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
             }
         }
 
-        DirectX::XMFLOAT4X4 world_to_environment_map_transform = this->hdri_light_get_world_to_environment_map_transform();
+        // Upload None Update Uniform Buffer
+        {
+            none_update_set_uniform_buffer_binding *const none_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, this->m_none_update_descriptor_set_uniform_buffer);
+            none_update_set_uniform_buffer_destination->g_view_transform = camera_view_transform;
+            none_update_set_uniform_buffer_destination->g_projection_transform = camera_projection_transform;
+            none_update_set_uniform_buffer_destination->g_inverse_view_transform = camera_inverse_view_transform;
+            none_update_set_uniform_buffer_destination->g_inverse_projection_transform = camera_inverse_projection_transform;
 
-        this->hdri_light_update_uniform_buffer(this->m_frame_throttling_index, camera_inverse_view_transform, camera_inverse_projection_transform, world_to_environment_map_transform);
+            this->quad_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
+            this->hdri_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
+            this->voxel_cone_tracing_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
+        }
 
         // HDRI Light SH Projection
         this->hdri_light_render_sh_projection(this->m_frame_throttling_index, command_buffer, this->m_hdri_light_dirty, this->m_hdri_light_layout);
@@ -1641,19 +1592,19 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                             buffers.push_back(surface_instance->get_vertex_position_buffer()->get_storage_buffer());
                             buffers.push_back(surface_instance->get_vertex_varying_buffer()->get_storage_buffer());
 
-                            descriptor_sets.push_back(surface_group_instance->get_deforming_per_surface_group_update_descriptor_set());
-                            descriptor_sets.push_back(surface_instance->get_deforming_per_surface_update_descriptor_set());
+                            descriptor_sets.push_back(surface_group_instance->get_deforming_surface_group_update_descriptor_set());
+                            descriptor_sets.push_back(surface_instance->get_deforming_surface_update_descriptor_set());
 
                             vertex_counts.push_back(surface->get_vertex_count());
                         }
                     }
 
-                    // Update Uniform Buffer
+                    // Upload Deforming Surface Uniform Buffer
                     if (deforming)
                     {
-                        deforming_per_surface_group_update_set_uniform_buffer_binding *const deforming_per_surface_group_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<deforming_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, surface_group_instance->get_deforming_per_surface_group_update_set_uniform_buffer());
+                        deforming_surface_group_update_set_uniform_buffer_binding *const deforming_surface_group_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<deforming_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, surface_group_instance->get_deforming_surface_group_update_set_uniform_buffer());
                         static_assert(BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT == MORPH_TARGET_WEIGHT_COUNT, "");
-                        static_assert(BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT <= DEFORMING_MAX_MORPH_TARGET_WEIGHT_COUNT, "");
+                        static_assert(BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT <= DEFORMING_SURFACE_MAX_MORPH_TARGET_WEIGHT_COUNT, "");
                         for (uint32_t morph_target_name_index = 0U; morph_target_name_index < BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT; ++morph_target_name_index)
                         {
                             BRX_ANARI_MORPH_TARGET_NAME const morph_target_name = static_cast<BRX_ANARI_MORPH_TARGET_NAME>(morph_target_name_index);
@@ -1667,31 +1618,31 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                             case 0U:
                             {
                                 assert(0U == component_index);
-                                deforming_per_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].x = morph_target_weight;
+                                deforming_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].x = morph_target_weight;
                             }
                             break;
                             case 1U:
                             {
                                 assert(1U == component_index);
-                                deforming_per_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].y = morph_target_weight;
+                                deforming_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].y = morph_target_weight;
                             }
                             break;
                             case 2U:
                             {
                                 assert(2U == component_index);
-                                deforming_per_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].z = morph_target_weight;
+                                deforming_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].z = morph_target_weight;
                             }
                             break;
                             default:
                             {
                                 assert(3U == component_index);
-                                deforming_per_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].w = morph_target_weight;
+                                deforming_surface_group_update_set_uniform_buffer_destination->g_packed_vector_morph_target_weights[packed_vector_index].w = morph_target_weight;
                             }
                             }
                         }
 
                         uint32_t const joint_count = surface_group_instance->get_skin_transform_count();
-                        assert(joint_count <= DEFORMING_MAX_JOINT_COUNT);
+                        assert(joint_count <= DEFORMING_SURFACE_MAX_JOINT_COUNT);
                         for (uint32_t joint_index = 0U; joint_index < joint_count; ++joint_index)
                         {
                             DirectX::XMFLOAT4 skin_dual_quaternion[2];
@@ -1702,8 +1653,8 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                                 unit_dual_quaternion_from_rigid_transform(skin_dual_quaternion, skin_rotation, skin_translation);
                             }
 
-                            deforming_per_surface_group_update_set_uniform_buffer_destination->g_dual_quaternions[2 * joint_index] = skin_dual_quaternion[0];
-                            deforming_per_surface_group_update_set_uniform_buffer_destination->g_dual_quaternions[2 * joint_index + 1] = skin_dual_quaternion[1];
+                            deforming_surface_group_update_set_uniform_buffer_destination->g_dual_quaternions[2 * joint_index] = skin_dual_quaternion[0];
+                            deforming_surface_group_update_set_uniform_buffer_destination->g_dual_quaternions[2 * joint_index + 1] = skin_dual_quaternion[1];
                         }
                     }
                 }
@@ -1728,9 +1679,9 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                         descriptor_sets[2U * surface_index],
                         descriptor_sets[2U * surface_index + 1U]};
 
-                    uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<deforming_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
+                    uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<deforming_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
 
-                    command_buffer->bind_compute_descriptor_sets(this->m_deforming_pipeline_layout, sizeof(descritor_sets) / sizeof(descritor_sets[0]), descritor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                    command_buffer->bind_compute_descriptor_sets(this->m_deforming_surface_update_pipeline_layout, sizeof(descritor_sets) / sizeof(descritor_sets[0]), descritor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
 
                     uint32_t const vertex_count = vertex_counts[surface_index];
 
@@ -1748,29 +1699,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
             }
         }
 
-        // Update Forward Shading Uniform Buffer
-        {
-            forward_shading_none_update_set_uniform_buffer_binding *const forward_shading_none_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<forward_shading_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, this->m_forward_shading_none_update_set_uniform_buffer);
-            forward_shading_none_update_set_uniform_buffer_destination->g_view_transform = camera_view_transform;
-            forward_shading_none_update_set_uniform_buffer_destination->g_inverse_view_transform = camera_inverse_view_transform;
-            forward_shading_none_update_set_uniform_buffer_destination->g_projection_transform = camera_projection_transform;
-            forward_shading_none_update_set_uniform_buffer_destination->g_inverse_projection_transform = camera_inverse_projection_transform;
-            forward_shading_none_update_set_uniform_buffer_destination->g_world_to_environment_map_transform = world_to_environment_map_transform;
-
-            for (uint32_t viewport_depth_direction_index = 0U; viewport_depth_direction_index < static_cast<uint32_t>(BRX_VCT_VIEWPORT_DEPTH_DIRECTION_COUNT); ++viewport_depth_direction_index)
-            {
-                forward_shading_none_update_set_uniform_buffer_destination->g_viewport_depth_direction_view_matrices[viewport_depth_direction_index] = voxel_cone_tracing_viewport_depth_direction_view_matrices[viewport_depth_direction_index];
-            }
-
-            for (uint32_t stack_level = 0U; stack_level < static_cast<uint32_t>(BRX_VCT_CLIPMAP_STACK_LEVEL_COUNT); ++stack_level)
-            {
-                forward_shading_none_update_set_uniform_buffer_destination->g_clipmap_stack_level_projection_matrices[stack_level] = voxel_cone_tracing_clipmap_stack_level_projection_matrices[stack_level];
-            }
-
-            forward_shading_none_update_set_uniform_buffer_destination->g_environment_map_layout = this->m_hdri_light_layout;
-        }
-
-        // Update Forward Shading Surface Uniform Buffer
+        // Upload Surface Uniform Buffer
         {
             for (auto const &world_surface_group_instance : this->m_world_surface_group_instances)
             {
@@ -1784,9 +1713,9 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
                     assert(surface_group_instance->get_surface_group() == surface_group);
 
-                    // Update Uniform Buffer
+                    // Upload Uniform Buffer
                     {
-                        forward_shading_per_surface_group_update_set_uniform_buffer_binding *const forward_shading_per_surface_group_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<forward_shading_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, surface_group_instance->get_forward_shading_per_surface_group_update_set_uniform_buffer());
+                        surface_group_update_set_uniform_buffer_binding *const surface_group_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, surface_group_instance->get_surface_group_update_set_uniform_buffer());
 
                         DirectX::XMFLOAT4X4 model_transform;
                         {
@@ -1797,21 +1726,10 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                             DirectX::XMStoreFloat4x4(&model_transform, simd_model_transform);
                         }
 
-                        forward_shading_per_surface_group_update_set_uniform_buffer_destination->g_model_transform = model_transform;
+                        surface_group_update_set_uniform_buffer_destination->g_model_transform = model_transform;
                     }
                 }
             }
-        }
-
-        // Update Post Processing Uniform Buffer
-        {
-            post_processing_none_update_set_uniform_buffer_binding *const post_processing_none_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<post_processing_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, this->m_post_processing_none_update_set_uniform_buffer);
-            post_processing_none_update_set_uniform_buffer_destination->g_inverse_view_transform = camera_inverse_view_transform;
-            post_processing_none_update_set_uniform_buffer_destination->g_inverse_projection_transform = camera_inverse_projection_transform;
-            post_processing_none_update_set_uniform_buffer_destination->g_clipmap_anchor = voxel_cone_tracing_clipmap_anchor;
-            post_processing_none_update_set_uniform_buffer_destination->g_clipmap_center = voxel_cone_tracing_clipmap_center;
-            post_processing_none_update_set_uniform_buffer_destination->g_environment_map_layout = this->m_hdri_light_layout;
-            post_processing_none_update_set_uniform_buffer_destination->g_renderer_gi_quality = this->m_renderer_gi_quality;
         }
 
         // Forward Shading Pass
@@ -1856,13 +1774,13 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
                             {
                                 brx_pal_descriptor_set const *const descriptor_sets[] = {
-                                    this->m_forward_shading_descriptor_set_none_update,
-                                    surface_group_instance->get_forward_shading_per_surface_group_update_descriptor_set(),
-                                    surface->get_deforming() ? surface_instance->get_forward_shading_per_surface_update_descriptor_set() : surface->get_forward_shading_per_surface_update_descriptor_set()};
+                                    this->m_none_update_descriptor_set,
+                                    surface_group_instance->get_surface_group_update_descriptor_set(),
+                                    surface->get_deforming() ? surface_instance->get_surface_update_descriptor_set() : surface->get_surface_update_descriptor_set()};
 
-                                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index), this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_per_surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
+                                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index), this->helper_compute_uniform_buffer_dynamic_offset<surface_group_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
 
-                                command_buffer->bind_graphics_descriptor_sets(this->m_forward_shading_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                                command_buffer->bind_graphics_descriptor_sets(this->m_surface_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
                             }
 
                             command_buffer->draw(surface->get_index_count(), 1U, 0U, 0U);
@@ -1870,6 +1788,9 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
                     }
                 }
             }
+
+            // Quad Light Emissive
+            this->quad_light_render_emissive(this->m_frame_throttling_index, command_buffer);
 
             // HDRI Light Skybox
             this->hdri_light_render_skybox(this->m_frame_throttling_index, command_buffer, this->m_hdri_light_layout);
@@ -1896,11 +1817,11 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
             command_buffer->set_scissor(0, 0, this->m_intermediate_width, this->m_intermediate_height);
 
             {
-                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
+                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_none_update_descriptor_set};
 
-                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index)};
 
-                command_buffer->bind_graphics_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                command_buffer->bind_graphics_descriptor_sets(this->m_none_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
 
             command_buffer->draw(3U, 1U, 0U, 0U);

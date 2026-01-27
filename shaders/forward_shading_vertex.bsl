@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "forward_shading_resource_binding.bsli"
+#include "surface_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 

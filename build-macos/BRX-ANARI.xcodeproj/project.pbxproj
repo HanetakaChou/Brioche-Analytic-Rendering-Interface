@@ -17,6 +17,7 @@
 		849418BA2F13A2680022634B /* BRX-ImGui.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 849418B92F13A2680022634B /* BRX-ImGui.framework */; };
 		849418BE2F13A2720022634B /* BRX-PAL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 849418BD2F13A2720022634B /* BRX-PAL.framework */; };
 		849418C22F13A2760022634B /* McRT-Malloc.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 849418C12F13A2760022634B /* McRT-Malloc.framework */; };
+		84DA4C832F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 84DA4C822F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 		849418B92F13A2680022634B /* BRX-ImGui.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = "BRX-ImGui.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
 		849418BD2F13A2720022634B /* BRX-PAL.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = "BRX-PAL.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
 		849418C12F13A2760022634B /* McRT-Malloc.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = "McRT-Malloc.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		84DA4C822F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_anari_pal_quad_light.cpp; path = ../source/brx_anari_pal_quad_light.cpp; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -54,6 +56,7 @@
 				849418AA2F13211E0022634B /* brx_anari_pal_device.cpp */,
 				849418AB2F13211E0022634B /* brx_anari_pal_hdri_light.cpp */,
 				849418AC2F13211E0022634B /* brx_anari_pal_image.cpp */,
+				84DA4C822F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp */,
 				849418AD2F13211E0022634B /* brx_anari_pal_resource.cpp */,
 				849418AE2F13211E0022634B /* brx_anari_pal_surface.cpp */,
 				849418AF2F13211E0022634B /* brx_anari_pal_voxel_cone_tracing.cpp */,
@@ -188,6 +191,7 @@
 				849418B02F13211E0022634B /* brx_anari_pal_hdri_light.cpp in Sources */,
 				849418B12F13211E0022634B /* brx_anari_pal_device.cpp in Sources */,
 				849418B22F13211E0022634B /* brx_anari_pal_image.cpp in Sources */,
+				84DA4C832F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp in Sources */,
 				849418B32F13211E0022634B /* brx_anari_pal_surface.cpp in Sources */,
 				849418B42F13211E0022634B /* brx_anari_pal_voxel_cone_tracing.cpp in Sources */,
 				849418B52F13211E0022634B /* brx_anari_pal_resource.cpp in Sources */,

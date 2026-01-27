@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "deforming_resource_binding.bsli"
+#include "deforming_surface_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 #if defined(GL_SPIRV) || defined(VULKAN)
@@ -40,9 +40,9 @@ brx_compute_shader_parameter_begin(main)
 brx_compute_shader_parameter_in_group_id
 brx_pixel_shader_parameter_end(main)
 {
-    brx_uint max_vertex_position_count = brx_byte_address_buffer_get_dimension(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_POSITION_BUFFER_INDEX]) / SURFACE_VERTEX_POSITION_BUFFER_STRIDE;
+    brx_uint max_vertex_position_count = brx_byte_address_buffer_get_dimension(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_POSITION_BUFFER_INDEX]) / SURFACE_VERTEX_POSITION_BUFFER_STRIDE;
 
-    brx_uint max_vertex_varying_count = brx_byte_address_buffer_get_dimension(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_VARYING_BUFFER_INDEX]) / SURFACE_VERTEX_VARYING_BUFFER_STRIDE;
+    brx_uint max_vertex_varying_count = brx_byte_address_buffer_get_dimension(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_VARYING_BUFFER_INDEX]) / SURFACE_VERTEX_VARYING_BUFFER_STRIDE;
 
     brx_branch
     if (max_vertex_position_count != max_vertex_varying_count)
@@ -64,7 +64,7 @@ brx_pixel_shader_parameter_end(main)
 
     brx_float3 vertex_position_model_space;
     {
-        brx_uint3 packed_vector_vertex_position_binding = brx_byte_address_buffer_load3(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset);
+        brx_uint3 packed_vector_vertex_position_binding = brx_byte_address_buffer_load3(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset);
         vertex_position_model_space = brx_uint_as_float(packed_vector_vertex_position_binding);
     }
 
@@ -72,7 +72,7 @@ brx_pixel_shader_parameter_end(main)
     brx_float4 vertex_tangent_model_space;
     brx_float2 vertex_texcoord;
     {
-        brx_uint3 packed_vector_vertex_varying_binding = brx_byte_address_buffer_load3(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_VARYING_BUFFER_INDEX], vertex_varying_buffer_offset);
+        brx_uint3 packed_vector_vertex_varying_binding = brx_byte_address_buffer_load3(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_VARYING_BUFFER_INDEX], vertex_varying_buffer_offset);
         vertex_normal_model_space = brx_octahedral_unmap(brx_R16G16_SNORM_to_FLOAT2(packed_vector_vertex_varying_binding.x));
         brx_float3 vertex_mapped_tangent_model_space = brx_R15G15B2_SNORM_to_FLOAT3(packed_vector_vertex_varying_binding.y);
         vertex_tangent_model_space = brx_float4(brx_octahedral_unmap(vertex_mapped_tangent_model_space.xy), vertex_mapped_tangent_model_space.z);
@@ -117,7 +117,7 @@ brx_pixel_shader_parameter_end(main)
             }
         }
 
-        brx_uint max_morph_target_vertex_position_count = brx_byte_address_buffer_get_dimension(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_POSITION_BUFFER_INDEX]) / SURFACE_VERTEX_POSITION_BUFFER_STRIDE;
+        brx_uint max_morph_target_vertex_position_count = brx_byte_address_buffer_get_dimension(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_POSITION_BUFFER_INDEX]) / SURFACE_VERTEX_POSITION_BUFFER_STRIDE;
 
         brx_branch
         if (max_morph_target_vertex_position_count == max_vertex_position_count)
@@ -127,7 +127,7 @@ brx_pixel_shader_parameter_end(main)
             {
                 brx_float3 morph_target_vertex_position_model_space;
                 {
-                    brx_uint3 packed_vector_morph_target_vertex_position_binding = brx_byte_address_buffer_load3(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset);
+                    brx_uint3 packed_vector_morph_target_vertex_position_binding = brx_byte_address_buffer_load3(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset);
                     morph_target_vertex_position_model_space = brx_uint_as_float(packed_vector_morph_target_vertex_position_binding);
                 }
 
@@ -135,7 +135,7 @@ brx_pixel_shader_parameter_end(main)
             }
         }
 
-        brx_uint max_morph_target_vertex_varying_count = brx_byte_address_buffer_get_dimension(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_VARYING_BUFFER_INDEX]) / SURFACE_VERTEX_VARYING_BUFFER_STRIDE;
+        brx_uint max_morph_target_vertex_varying_count = brx_byte_address_buffer_get_dimension(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_VARYING_BUFFER_INDEX]) / SURFACE_VERTEX_VARYING_BUFFER_STRIDE;
 
         brx_branch
         if (max_morph_target_vertex_varying_count == max_vertex_varying_count)
@@ -147,7 +147,7 @@ brx_pixel_shader_parameter_end(main)
                 brx_float4 morph_target_vertex_tangent_model_space;
                 brx_float2 morph_target_vertex_texcoord;
                 {
-                    brx_uint3 packed_vector_morph_target_vertex_varying_binding = brx_byte_address_buffer_load3(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_VARYING_BUFFER_INDEX], vertex_varying_buffer_offset);
+                    brx_uint3 packed_vector_morph_target_vertex_varying_binding = brx_byte_address_buffer_load3(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_BUFFER_COUNT + DEFORMING_SURFACE_INPUT_MORPH_TARGET_BUFFER_COUNT * morph_target_weight_index + DEFORMING_SURFACE_INPUT_MORPH_TARGET_VERTEX_VARYING_BUFFER_INDEX], vertex_varying_buffer_offset);
                     morph_target_vertex_normal_model_space = brx_octahedral_unmap(brx_R16G16_SNORM_to_FLOAT2(packed_vector_morph_target_vertex_varying_binding.x));
                     brx_float3 morph_target_vertex_mapped_tangent_model_space = brx_R15G15B2_SNORM_to_FLOAT3(packed_vector_morph_target_vertex_varying_binding.y);
                     morph_target_vertex_tangent_model_space = brx_float4(brx_octahedral_unmap(morph_target_vertex_mapped_tangent_model_space.xy), morph_target_vertex_mapped_tangent_model_space.z);
@@ -171,7 +171,7 @@ brx_pixel_shader_parameter_end(main)
     brx_float4 joint_weights;
     {
         brx_uint vertex_joint_buffer_offset = SURFACE_VERTEX_BLENDING_BUFFER_STRIDE * vertex_index;
-        brx_uint3 packed_vector_vertex_joint_buffer = brx_byte_address_buffer_load3(g_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_BLENDING_BUFFER_INDEX], vertex_joint_buffer_offset);
+        brx_uint3 packed_vector_vertex_joint_buffer = brx_byte_address_buffer_load3(t_deforming_surface_input_buffers[DEFORMING_SURFACE_INPUT_VERTEX_BLENDING_BUFFER_INDEX], vertex_joint_buffer_offset);
         joint_indices = brx_R16G16B16A16_UINT_to_UINT4(packed_vector_vertex_joint_buffer.xy);
         joint_weights = brx_R8G8B8A8_UNORM_to_FLOAT4(packed_vector_vertex_joint_buffer.z);
     }
@@ -197,6 +197,6 @@ brx_pixel_shader_parameter_end(main)
     brx_uint3 packed_vector_skined_vertex_position_binding = brx_float_as_uint(skined_vertex_position_model_space);
     brx_uint3 packed_vector_skined_vertex_varying_binding = brx_uint3(brx_FLOAT2_to_R16G16_SNORM(brx_octahedral_map(skined_vertex_normal_model_space)), brx_FLOAT3_to_R15G15B2_SNORM(brx_float3(brx_octahedral_map(skined_vertex_tangent_model_space.xyz), skined_vertex_tangent_model_space.w)), brx_FLOAT2_to_R16G16_UNORM(morphed_vertex_texcoord));
 
-    brx_byte_address_buffer_store3(g_surface_output_buffers[DEFORMING_SURFACE_OUTPUT_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset, packed_vector_skined_vertex_position_binding);
-    brx_byte_address_buffer_store3(g_surface_output_buffers[DEFORMING_SURFACE_OUTPUT_VERTEX_VARYING_BUFFER_INDEX], vertex_varying_buffer_offset, packed_vector_skined_vertex_varying_binding);
+    brx_byte_address_buffer_store3(u_deforming_surface_output_buffers[DEFORMING_SURFACE_OUTPUT_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset, packed_vector_skined_vertex_position_binding);
+    brx_byte_address_buffer_store3(u_deforming_surface_output_buffers[DEFORMING_SURFACE_OUTPUT_VERTEX_VARYING_BUFFER_INDEX], vertex_varying_buffer_offset, packed_vector_skined_vertex_varying_binding);
 }

@@ -36,6 +36,7 @@
 #else
 #error Unknown Compiler
 #endif
+#include "../shaders/none_update_resource_binding.bsli"
 
 class brx_anari_pal_device;
 class brx_anari_pal_image;
@@ -55,26 +56,18 @@ class brx_anari_pal_device final : public brx_anari_device
 	brx_pal_sampler *m_shared_none_update_set_linear_wrap_sampler;
 	brx_pal_sampler *m_shared_none_update_set_linear_clamp_sampler;
 	// ---
-	brx_pal_descriptor_set_layout *m_deforming_descriptor_set_layout_per_surface_group_update;
-	brx_pal_descriptor_set_layout *m_deforming_descriptor_set_layout_per_surface_update;
-	brx_pal_pipeline_layout *m_deforming_pipeline_layout;
+	brx_pal_uniform_upload_buffer *m_none_update_descriptor_set_uniform_buffer;
+	brx_pal_descriptor_set_layout *m_none_update_descriptor_set_layout;
+	brx_pal_descriptor_set *m_none_update_descriptor_set;
+	brx_pal_pipeline_layout *m_none_update_pipeline_layout;
 	// ---
-	brx_pal_uniform_upload_buffer *m_environment_lighting_none_update_set_uniform_buffer;
-	brx_pal_descriptor_set *m_environment_lighting_descriptor_set_none_update;
-	brx_pal_descriptor_set_layout *m_environment_lighting_descriptor_set_layout_per_environment_lighting_update;
-	brx_pal_pipeline_layout *m_environment_lighting_pipeline_layout;
+	brx_pal_descriptor_set_layout *m_deforming_surface_group_update_descriptor_set_layout;
+	brx_pal_descriptor_set_layout *m_deforming_surface_update_descriptor_set_layout;
+	brx_pal_pipeline_layout *m_deforming_surface_update_pipeline_layout;
 	// ---
-	brx_pal_uniform_upload_buffer *m_forward_shading_none_update_set_uniform_buffer;
-	brx_pal_descriptor_set_layout *m_forward_shading_descriptor_set_layout_none_update;
-	brx_pal_descriptor_set *m_forward_shading_descriptor_set_none_update;
-	brx_pal_descriptor_set_layout *m_forward_shading_descriptor_set_layout_per_surface_group_update;
-	brx_pal_descriptor_set_layout *m_forward_shading_descriptor_set_layout_per_surface_update;
-	brx_pal_pipeline_layout *m_forward_shading_pipeline_layout;
-	// ---
-	brx_pal_uniform_upload_buffer *m_post_processing_none_update_set_uniform_buffer;
-	brx_pal_descriptor_set_layout *m_post_processing_descriptor_set_layout_none_update;
-	brx_pal_descriptor_set *m_post_processing_descriptor_set_none_update;
-	brx_pal_pipeline_layout *m_post_processing_pipeline_layout;
+	brx_pal_descriptor_set_layout *m_surface_group_update_descriptor_set_layout;
+	brx_pal_descriptor_set_layout *m_surface_update_descriptor_set_layout;
+	brx_pal_pipeline_layout *m_surface_update_pipeline_layout;
 	// ---
 	brx_pal_compute_pipeline *m_deforming_pipeline;
 	// ---
@@ -140,14 +133,19 @@ class brx_anari_pal_device final : public brx_anari_device
 #endif
 	uint32_t m_frame_throttling_index;
 
-	brx_pal_sampled_asset_image *m_lut_specular_hdr_fresnel_factors_asset_image;
-	brx_pal_sampled_asset_image *m_lut_specular_transfer_function_sh_coefficients_asset_image;
+	brx_pal_sampled_asset_image *m_lut_specular_hdr_fresnel_factor_asset_image;
+	brx_pal_sampled_asset_image *m_lut_specular_ltc_matrix_asset_image;
+	brx_pal_sampled_asset_image *m_lut_specular_transfer_function_sh_coefficient_asset_image;
 
 	brx_pal_storage_asset_buffer *m_place_holder_asset_buffer;
 	brx_pal_sampled_asset_image *m_place_holder_asset_image;
 	brx_pal_storage_image *m_place_holder_storage_image;
 
 	mcrt_unordered_map<brx_anari_surface_group const *, mcrt_set<brx_anari_surface_group_instance const *>> m_world_surface_group_instances;
+
+	mcrt_vector<BRX_ANARI_QUAD> m_quad_lights;
+	brx_pal_graphics_pipeline *m_area_lighting_emissive_pipeline;
+	bool m_quad_lights_enable_debug_renderer;
 
 	brx_anari_image *m_hdri_light_radiance;
 #ifndef NDEBUG
@@ -161,7 +159,6 @@ class brx_anari_pal_device final : public brx_anari_device
 #endif
 	bool m_hdri_light_dirty;
 	brx_pal_storage_intermediate_buffer *m_hdri_light_environment_map_sh_coefficients;
-	brx_pal_descriptor_set *m_hdri_light_environment_lighting_descriptor_set_per_environment_lighting_update;
 
 	brx_anari_vec3 m_camera_position;
 	brx_anari_vec3 m_camera_direction;
@@ -211,13 +208,13 @@ public:
 	inline brx_pal_storage_intermediate_buffer *create_deforming_surface_intermediate_vertex_position_buffer(uint32_t vertex_count);
 	inline brx_pal_storage_intermediate_buffer *create_deforming_surface_intermediate_vertex_varying_buffer(uint32_t vertex_count);
 
-	inline brx_pal_uniform_upload_buffer *create_deforming_per_surface_group_update_set_uniform_buffer();
-	inline brx_pal_descriptor_set *create_deforming_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer);
-	inline brx_pal_descriptor_set *create_deforming_per_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const vertex_blending_buffer, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_position_buffers, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_varying_buffers, brx_pal_storage_buffer const *const vertex_position_buffer_instance, brx_pal_storage_buffer const *const vertex_varying_buffer_instance);
+	inline brx_pal_uniform_upload_buffer *create_deforming_surface_group_update_set_uniform_buffer();
+	inline brx_pal_descriptor_set *create_deforming_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer);
+	inline brx_pal_descriptor_set *create_deforming_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const vertex_blending_buffer, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_position_buffers, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_varying_buffers, brx_pal_storage_buffer const *const vertex_position_buffer_instance, brx_pal_storage_buffer const *const vertex_varying_buffer_instance);
 
-	inline brx_pal_uniform_upload_buffer *create_forward_shading_per_surface_group_update_set_uniform_buffer();
-	inline brx_pal_descriptor_set *create_forward_shading_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer);
-	inline brx_pal_descriptor_set *create_forward_shading_per_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image);
+	inline brx_pal_uniform_upload_buffer *create_surface_group_update_set_uniform_buffer();
+	inline brx_pal_descriptor_set *create_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer);
+	inline brx_pal_descriptor_set *create_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image);
 
 	void release_image(brx_anari_pal_image *const image);
 	void release_surface_group(brx_anari_pal_surface_group *const surface_group);
@@ -258,6 +255,10 @@ private:
 	brx_anari_surface_group_instance *world_new_surface_group_instance(brx_anari_surface_group *surface_group) override;
 	void world_release_surface_group_instance(brx_anari_surface_group_instance *surface_group_instance) override;
 
+	void set_quad_lights(uint32_t quad_light_count, BRX_ANARI_QUAD const *quad_lights) override;
+	void set_quad_lights_enable_debug_renderer(bool quad_lights_enable_debug_renderer) override;
+	bool get_quad_lights_enable_debug_renderer() const override;
+
 	void hdri_light_set_radiance(brx_anari_image *radiance) override;
 	void hdri_light_set_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT layout) override;
 	void hdri_light_set_direction(brx_anari_vec3 direction) override;
@@ -296,19 +297,21 @@ private:
 	inline void attach_swap_chain(BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
 	inline void detach_swap_chain(BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
 
+	void quad_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination);
+	void quad_light_create_pipeline();
+	void quad_light_destroy_pipeline();
+	void quad_light_render_emissive(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer);
+
+	void hdri_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination);
+	void hdri_light_write_place_holder_none_update_descriptor();
 	void hdri_light_create_none_update_binding_resource();
 	void hdri_light_destroy_none_update_binding_resource();
-	void hdri_light_create_none_update_descriptor();
-	void hdri_light_destroy_none_update_descriptor();
 	void hdri_light_create_pipeline();
 	void hdri_light_destroy_pipeline();
-	void hdri_light_create_per_environment_lighting_descriptor(brx_pal_sampled_image const *const radiance);
-	void hdri_light_destroy_per_environment_lighting_descriptor();
-	DirectX::XMFLOAT4X4 hdri_light_get_world_to_environment_map_transform();
-	void hdri_light_update_uniform_buffer(uint32_t frame_throttling_index, DirectX::XMFLOAT4X4 const &inverse_view_transform, DirectX::XMFLOAT4X4 const &inverse_projection_transform, DirectX::XMFLOAT4X4 const &world_to_environment_map_transform);
 	void hdri_light_render_sh_projection(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_hdri_light_sh_dirty, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout);
 	void hdri_light_render_skybox(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout);
 
+	void voxel_cone_tracing_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination);
 	void voxel_cone_tracing_write_quality_dependent_place_holder_none_update_descriptor();
 	void voxel_cone_tracing_create_quality_dependent_none_update_binding_resource();
 	void voxel_cone_tracing_destroy_quality_dependent_none_update_binding_resource();
@@ -362,7 +365,7 @@ class brx_anari_pal_surface
 	brx_pal_storage_asset_buffer *m_auxiliary_buffer;
 
 	// rasterization // available when no morph and no skin
-	brx_pal_descriptor_set *m_forward_shading_descriptor_set_per_surface_update;
+	brx_pal_descriptor_set *m_surface_update_descriptor_set;
 
 public:
 	inline brx_anari_pal_surface();
@@ -383,7 +386,7 @@ public:
 	inline brx_anari_pal_image const *get_base_color_image() const;
 	inline brx_anari_pal_image const *get_metallic_roughness_image() const;
 	bool get_deforming() const;
-	brx_pal_descriptor_set const *get_forward_shading_per_surface_update_descriptor_set() const;
+	brx_pal_descriptor_set const *get_surface_update_descriptor_set() const;
 };
 
 class brx_anari_pal_surface_group final : public brx_anari_surface_group
@@ -412,10 +415,10 @@ class brx_anari_pal_surface_instance
 	// available when morph or skin
 	brx_pal_storage_intermediate_buffer *m_vertex_position_buffer;
 	brx_pal_storage_intermediate_buffer *m_vertex_varying_buffer;
-	brx_pal_descriptor_set *m_deforming_descriptor_set_per_surface_update;
+	brx_pal_descriptor_set *m_deforming_surface_update_descriptor_set;
 
 	// rasterization // available when morph or skin
-	brx_pal_descriptor_set *m_forward_shading_descriptor_set_per_surface_update;
+	brx_pal_descriptor_set *m_surface_update_descriptor_set;
 
 public:
 	inline brx_anari_pal_surface_instance();
@@ -424,8 +427,8 @@ public:
 	inline void uninit(brx_anari_pal_device *device, brx_anari_pal_surface const *surface);
 	brx_pal_storage_intermediate_buffer const *get_vertex_position_buffer() const;
 	brx_pal_storage_intermediate_buffer const *get_vertex_varying_buffer() const;
-	brx_pal_descriptor_set const *get_deforming_per_surface_update_descriptor_set() const;
-	brx_pal_descriptor_set const *get_forward_shading_per_surface_update_descriptor_set() const;
+	brx_pal_descriptor_set const *get_deforming_surface_update_descriptor_set() const;
+	brx_pal_descriptor_set const *get_surface_update_descriptor_set() const;
 #ifndef NDEBUG
 	bool get_deforming() const;
 #endif
@@ -438,11 +441,11 @@ class brx_anari_pal_surface_group_instance final : public brx_anari_surface_grou
 	mcrt_vector<brx_anari_pal_surface_instance> m_surfaces;
 
 	// available when morph or skin
-	brx_pal_uniform_upload_buffer *m_deforming_per_surface_group_update_set_uniform_buffer;
-	brx_pal_descriptor_set *m_deforming_descriptor_set_per_surface_group_update;
+	brx_pal_uniform_upload_buffer *m_deforming_surface_group_update_set_uniform_buffer;
+	brx_pal_descriptor_set *m_deforming_surface_group_update_descriptor_set;
 
-	brx_pal_uniform_upload_buffer *m_forward_shading_per_surface_group_update_set_uniform_buffer;
-	brx_pal_descriptor_set *m_forward_shading_descriptor_set_per_surface_group_update;
+	brx_pal_uniform_upload_buffer *m_surface_group_update_set_uniform_buffer;
+	brx_pal_descriptor_set *m_surface_group_update_descriptor_set;
 
 	// brx_pal_intermediate_bottom_level_acceleration_structure *m_ray_tracing_intermediate_bottom_level_acceleration_structure;
 	// brx_pal_scratch_buffer *m_ray_tracing_intermediate_bottom_level_acceleration_structure_update_scratch_buffer;
@@ -457,10 +460,10 @@ public:
 	inline void init(brx_anari_pal_device *device, brx_anari_pal_surface_group *surface_group);
 	inline void uninit(brx_anari_pal_device *device);
 	brx_anari_pal_surface_group const *get_surface_group() const;
-	brx_pal_uniform_upload_buffer const *get_deforming_per_surface_group_update_set_uniform_buffer() const;
-	brx_pal_descriptor_set const *get_deforming_per_surface_group_update_descriptor_set() const;
-	brx_pal_uniform_upload_buffer const *get_forward_shading_per_surface_group_update_set_uniform_buffer() const;
-	brx_pal_descriptor_set const *get_forward_shading_per_surface_group_update_descriptor_set() const;
+	brx_pal_uniform_upload_buffer const *get_deforming_surface_group_update_set_uniform_buffer() const;
+	brx_pal_descriptor_set const *get_deforming_surface_group_update_descriptor_set() const;
+	brx_pal_uniform_upload_buffer const *get_surface_group_update_set_uniform_buffer() const;
+	brx_pal_descriptor_set const *get_surface_group_update_descriptor_set() const;
 	inline uint32_t get_surface_count() const;
 	brx_anari_pal_surface_instance const *get_surfaces() const;
 	float get_morph_target_weight(BRX_ANARI_MORPH_TARGET_NAME morph_target_name) const;

@@ -175,7 +175,14 @@ struct brx_anari_rigid_transform
 	float m_translation[3];
 };
 
-#if 1
+struct BRX_ANARI_QUAD
+{
+	brx_anari_vec3 m_radiance;
+	brx_anari_vec3 m_position;
+	brx_anari_vec3 m_edge1;
+	brx_anari_vec3 m_edge2;
+};
+
 class brx_anari_device
 {
 public:
@@ -188,11 +195,9 @@ public:
 	virtual brx_anari_surface_group_instance *world_new_surface_group_instance(brx_anari_surface_group *surface_group) = 0;
 	virtual void world_release_surface_group_instance(brx_anari_surface_group_instance *surface_group_instance) = 0;
 
-	// virtual void directional_light_set_direction(brx_anari_vec3 direction) = 0;
-	// virtual void directional_light_set_irradiance(float irradiance) = 0;
-
-	// virtual brx_anari_vec3 directional_light_get_direction() const = 0;
-	// virtual float directional_light_get_irradiance() const = 0;
+	virtual void set_quad_lights(uint32_t quad_light_count, BRX_ANARI_QUAD const *quad_lights) = 0;
+	virtual void set_quad_lights_enable_debug_renderer(bool quad_lights_enable_debug_renderer) = 0;
+	virtual bool get_quad_lights_enable_debug_renderer() const = 0;
 
 	virtual void hdri_light_set_radiance(brx_anari_image *radiance) = 0;
 	virtual void hdri_light_set_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT layout) = 0;
@@ -246,6 +251,5 @@ public:
 
 extern "C" brx_anari_device *brx_anari_new_device(void *wsi_connection);
 extern "C" void brx_anari_release_device(brx_anari_device *device);
-#endif
 
 #endif

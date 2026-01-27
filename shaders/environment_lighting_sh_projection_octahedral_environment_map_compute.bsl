@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "environment_lighting_resource_binding.bsli"
+#include "none_update_resource_binding.bsli"
 #define BRX_SH_PROJECTION_ENVIRONMENT_MAP_REDUCE_LAYOUT BRX_SH_PROJECTION_ENVIRONMENT_MAP_REDUCE_LAYOUT_OCTAHEDRAL_MAP
 #include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_projection_environment_map_reduce.bsli"
 

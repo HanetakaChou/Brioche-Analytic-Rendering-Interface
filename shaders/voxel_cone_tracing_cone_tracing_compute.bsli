@@ -18,7 +18,7 @@
 #ifndef _VOXEL_CONE_TRACING_CONE_TRACING_COMPUTE_BSLI_
 #define _VOXEL_CONE_TRACING_CONE_TRACING_COMPUTE_BSLI_ 1
 
-#include "post_processing_resource_binding.bsli"
+#include "none_update_resource_binding.bsli"
 #define BRX_VCT_ENABLE_ILLUMINATION 1
 #include "../../Voxel-Cone-Tracing/shaders/brx_voxel_cone_tracing_cone_tracing_compute.bsli"
 
@@ -34,7 +34,7 @@ brx_bool brx_vct_application_bridge_get_gbuffer_surface(in brx_int2 in_screen_sp
 
     brx_float2 screen_space_uv = (brx_float2(in_screen_space_coordinates) + brx_float2(0.5, 0.5)) / brx_float2(screen_space_dimension);
 
-    brx_float scene_depth = brx_sample_level_2d(t_scene_depth, s_sampler, screen_space_uv, 0).x;
+    brx_float scene_depth = brx_sample_level_2d(t_scene_depth, s_clamp_sampler, screen_space_uv, 0).x;
 
     brx_branch if (INVALID_SCENE_DEPTH_THRESHOLD == scene_depth)
     {
@@ -64,9 +64,9 @@ brx_bool brx_vct_application_bridge_get_gbuffer_surface(in brx_int2 in_screen_sp
 
         {
 
-            brx_float3 base_color = brx_sample_level_2d(t_gbuffer_base_color, s_sampler, screen_space_uv, 0).xyz;
+            brx_float3 base_color = brx_sample_level_2d(t_gbuffer_base_color, s_clamp_sampler, screen_space_uv, 0).xyz;
 
-            brx_float2 roughness_metallic = brx_sample_level_2d(t_gbuffer_roughness_metallic, s_sampler, screen_space_uv, 0).xy;
+            brx_float2 roughness_metallic = brx_sample_level_2d(t_gbuffer_roughness_metallic, s_clamp_sampler, screen_space_uv, 0).xy;
 
             out_surface_roughness = roughness_metallic.x;
 
@@ -74,8 +74,8 @@ brx_bool brx_vct_application_bridge_get_gbuffer_surface(in brx_int2 in_screen_sp
 
             // TODO: how to reduce sample count?
             // we can NOT interpolate the octahedral map uv
-            brx_float4 gbuffer_encoded_normals_red = brx_gather_red_2d(t_gbuffer_normal, s_sampler, screen_space_uv);
-            brx_float4 gbuffer_encoded_normals_green = brx_gather_green_2d(t_gbuffer_normal, s_sampler, screen_space_uv);
+            brx_float4 gbuffer_encoded_normals_red = brx_gather_red_2d(t_gbuffer_normal, s_clamp_sampler, screen_space_uv);
+            brx_float4 gbuffer_encoded_normals_green = brx_gather_green_2d(t_gbuffer_normal, s_clamp_sampler, screen_space_uv);
 
             brx_float2 gbuffer_encoded_normals[4];
             gbuffer_encoded_normals[0].x = gbuffer_encoded_normals_red.x;
@@ -128,7 +128,7 @@ brx_float4 brx_vct_application_bridge_get_clipmap_illumination_opacity(in brx_fl
 
     brx_float3 normalized_illumination_opacity_texture_coordinates = in_illumination_opacity_texture_coordinates / brx_float3(illumination_opacity_texture_dimension);
 
-    brx_float4 illumination_opacity = brx_sample_level_3d(t_clipmap_texture_illumination_opacity_r16g16b16a16, s_sampler, normalized_illumination_opacity_texture_coordinates, 0);
+    brx_float4 illumination_opacity = brx_sample_level_3d(t_clipmap_texture_illumination_opacity_r16g16b16a16, s_clamp_sampler, normalized_illumination_opacity_texture_coordinates, 0);
 
     return illumination_opacity;
 }

@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "environment_lighting_resource_binding.bsli"
+#include "none_update_resource_binding.bsli"
 
 brx_root_signature(environment_lighting_skybox_root_signature_macro, environment_lighting_skybox_root_signature_name)
 brx_vertex_shader_parameter_begin(main)

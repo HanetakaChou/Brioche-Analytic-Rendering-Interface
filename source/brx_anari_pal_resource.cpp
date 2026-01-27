@@ -18,6 +18,7 @@
 #include "brx_anari_pal_device.h"
 #include "../shaders/surface.bsli"
 #include "../../Hemispherical-Directional-Reflectance/include/brx_hemispherical_directional_reflectance_look_up_table_norms.h"
+#include "../../Linearly-Transformed-Cosine/include/brx_linearly_transformed_cosine_look_up_table_matrices.h"
 #include "../../Spherical-Harmonic/include/brx_spherical_harmonic_look_up_table_transfer_functions.h"
 #include <cstring>
 
@@ -136,6 +137,9 @@ void brx_anari_pal_device::init_lut_resource()
     assert(0U == (g_brx_hdr_lut_width & (g_brx_hdr_lut_width - 1U)));
     assert(0U == (g_brx_hdr_lut_height & (g_brx_hdr_lut_height - 1U)));
 
+    assert(0U == (g_brx_ltc_lut_width & (g_brx_ltc_lut_width - 1U)));
+    assert(0U == (g_brx_ltc_lut_height & (g_brx_ltc_lut_height - 1U)));
+
     assert(0U == (g_brx_sh_lut_width & (g_brx_sh_lut_width - 1U)));
     assert(0U == (g_brx_sh_lut_height & (g_brx_sh_lut_height - 1U)));
 
@@ -143,14 +147,20 @@ void brx_anari_pal_device::init_lut_resource()
     constexpr uint32_t const hdr_lut_array_layer_count = 1U;
     constexpr uint32_t const hdr_lut_subresource_count = hdr_lut_mip_level_count * hdr_lut_array_layer_count;
 
+    constexpr uint32_t const ltc_lut_mip_level_count = 1U;
+    constexpr uint32_t const ltc_lut_array_layer_count = 1U;
+    constexpr uint32_t const ltc_lut_subresource_count = ltc_lut_mip_level_count * ltc_lut_array_layer_count;
+
     constexpr uint32_t const sh_lut_mip_level_count = 1U;
     constexpr uint32_t const sh_lut_array_layer_count = g_brx_sh_lut_array_size;
     constexpr uint32_t const sh_lut_subresource_count = sh_lut_mip_level_count * sh_lut_array_layer_count;
 
     BRX_PAL_SAMPLED_ASSET_IMAGE_IMPORT_SUBRESOURCE_MEMCPY_DEST hdr_lut_subresource_memcpy_dests[hdr_lut_subresource_count];
+    BRX_PAL_SAMPLED_ASSET_IMAGE_IMPORT_SUBRESOURCE_MEMCPY_DEST ltc_lut_subresource_memcpy_dests[ltc_lut_subresource_count];
     BRX_PAL_SAMPLED_ASSET_IMAGE_IMPORT_SUBRESOURCE_MEMCPY_DEST sh_lut_subresource_memcpy_dests[sh_lut_subresource_count];
 
     brx_pal_staging_upload_buffer *hdr_lut_image_staging_upload_buffer = NULL;
+    brx_pal_staging_upload_buffer *ltc_lut_image_staging_upload_buffer = NULL;
     brx_pal_staging_upload_buffer *sh_lut_image_staging_upload_buffer = NULL;
 
     {
@@ -166,9 +176,10 @@ void brx_anari_pal_device::init_lut_resource()
 
         for (uint32_t array_layer_index = 0U; array_layer_index < hdr_lut_array_layer_count; ++array_layer_index)
         {
-            uint32_t input_row_count = g_brx_hdr_lut_height;
-            uint32_t input_row_size = static_cast<uint32_t>(sizeof(uint16_t)) * 2U * g_brx_hdr_lut_height;
-            uint32_t input_row_pitch = input_row_size;
+            constexpr uint32_t const input_row_count = g_brx_hdr_lut_height;
+            constexpr uint32_t const input_row_size = static_cast<uint32_t>(sizeof(uint16_t)) * 2U * g_brx_hdr_lut_height;
+            static_assert(sizeof(g_brx_hdr_lut_norms) == (input_row_size * input_row_count), "");
+            constexpr uint32_t const input_row_pitch = input_row_size;
 
             constexpr uint32_t const mip_level_index = 0U;
 
@@ -192,6 +203,41 @@ void brx_anari_pal_device::init_lut_resource()
             uint32_t const staging_upload_buffer_offset_alignment = this->m_device->get_staging_upload_buffer_offset_alignment();
             uint32_t const staging_upload_buffer_row_pitch_alignment = this->m_device->get_staging_upload_buffer_row_pitch_alignment();
 
+            uint32_t const total_bytes = brx_pal_sampled_asset_image_import_calculate_subresource_memcpy_dests(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16B16A16_SFLOAT, g_brx_ltc_lut_width, g_brx_ltc_lut_height, 1U, ltc_lut_mip_level_count, ltc_lut_array_layer_count, 0U, staging_upload_buffer_offset_alignment, staging_upload_buffer_row_pitch_alignment, ltc_lut_subresource_count, ltc_lut_subresource_memcpy_dests);
+
+            assert(NULL == ltc_lut_image_staging_upload_buffer);
+            ltc_lut_image_staging_upload_buffer = this->m_device->create_staging_upload_buffer(total_bytes);
+        }
+
+        for (uint32_t array_layer_index = 0U; array_layer_index < ltc_lut_array_layer_count; ++array_layer_index)
+        {
+            constexpr uint32_t const input_row_count = g_brx_ltc_lut_height;
+            constexpr uint32_t const input_row_size = static_cast<uint32_t>(sizeof(uint16_t)) * 4U * g_brx_ltc_lut_height;
+            static_assert(sizeof(g_brx_ltc_lut_matrices) == (input_row_size * input_row_count), "");
+            constexpr uint32_t const input_row_pitch = input_row_size;
+
+            constexpr uint32_t const mip_level_index = 0U;
+
+            uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, ltc_lut_mip_level_count, ltc_lut_array_layer_count);
+            assert(input_row_size == ltc_lut_subresource_memcpy_dests[subresource_index].output_row_size);
+            assert(input_row_count == ltc_lut_subresource_memcpy_dests[subresource_index].output_row_count);
+            uint32_t const memory_copy_count = std::min(input_row_size, ltc_lut_subresource_memcpy_dests[subresource_index].output_row_size);
+            assert(1U == ltc_lut_subresource_memcpy_dests[subresource_index].output_slice_count);
+
+            for (uint32_t row_index = 0U; row_index < input_row_count; ++row_index)
+            {
+                void *const memory_copy_destination = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(ltc_lut_image_staging_upload_buffer->get_host_memory_range_base()) + (ltc_lut_subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset + ltc_lut_subresource_memcpy_dests[subresource_index].output_row_pitch * row_index));
+                void *const memory_copy_source = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(g_brx_ltc_lut_matrices) + (input_row_pitch * input_row_count) * array_layer_index + input_row_pitch * row_index);
+                std::memcpy(memory_copy_destination, memory_copy_source, memory_copy_count);
+            }
+        }
+    }
+
+    {
+        {
+            uint32_t const staging_upload_buffer_offset_alignment = this->m_device->get_staging_upload_buffer_offset_alignment();
+            uint32_t const staging_upload_buffer_row_pitch_alignment = this->m_device->get_staging_upload_buffer_row_pitch_alignment();
+
             uint32_t const total_bytes = brx_pal_sampled_asset_image_import_calculate_subresource_memcpy_dests(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16_SFLOAT, g_brx_sh_lut_width, g_brx_sh_lut_height, 1U, sh_lut_mip_level_count, sh_lut_array_layer_count, 0U, staging_upload_buffer_offset_alignment, staging_upload_buffer_row_pitch_alignment, sh_lut_subresource_count, sh_lut_subresource_memcpy_dests);
 
             assert(NULL == sh_lut_image_staging_upload_buffer);
@@ -200,9 +246,10 @@ void brx_anari_pal_device::init_lut_resource()
 
         for (uint32_t array_layer_index = 0U; array_layer_index < sh_lut_array_layer_count; ++array_layer_index)
         {
-            uint32_t input_row_count = g_brx_sh_lut_width;
-            uint32_t input_row_size = static_cast<uint32_t>(sizeof(uint16_t)) * 1U * g_brx_sh_lut_height;
-            uint32_t input_row_pitch = input_row_size;
+            constexpr uint32_t const input_row_count = g_brx_sh_lut_width;
+            constexpr uint32_t const input_row_size = static_cast<uint32_t>(sizeof(uint16_t)) * 1U * g_brx_sh_lut_height;
+            static_assert(sizeof(g_brx_sh_lut_transfer_functions) == (input_row_size * input_row_count * sh_lut_array_layer_count), "");
+            constexpr uint32_t const input_row_pitch = input_row_size;
 
             constexpr uint32_t const mip_level_index = 0U;
 
@@ -221,11 +268,14 @@ void brx_anari_pal_device::init_lut_resource()
         }
     }
 
-    assert(NULL == this->m_lut_specular_hdr_fresnel_factors_asset_image);
-    this->m_lut_specular_hdr_fresnel_factors_asset_image = this->m_device->create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16_SFLOAT, g_brx_hdr_lut_width, g_brx_hdr_lut_height, false, hdr_lut_array_layer_count, 1U);
+    assert(NULL == this->m_lut_specular_hdr_fresnel_factor_asset_image);
+    this->m_lut_specular_hdr_fresnel_factor_asset_image = this->m_device->create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16_SFLOAT, g_brx_hdr_lut_width, g_brx_hdr_lut_height, false, hdr_lut_array_layer_count, 1U);
 
-    assert(NULL == this->m_lut_specular_transfer_function_sh_coefficients_asset_image);
-    this->m_lut_specular_transfer_function_sh_coefficients_asset_image = this->m_device->create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16_SFLOAT, g_brx_sh_lut_width, g_brx_sh_lut_height, true, sh_lut_array_layer_count, 1U);
+    assert(NULL == this->m_lut_specular_ltc_matrix_asset_image);
+    this->m_lut_specular_ltc_matrix_asset_image = this->m_device->create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16B16A16_SFLOAT, g_brx_ltc_lut_width, g_brx_ltc_lut_height, false, ltc_lut_array_layer_count, 1U);
+
+    assert(NULL == this->m_lut_specular_transfer_function_sh_coefficient_asset_image);
+    this->m_lut_specular_transfer_function_sh_coefficient_asset_image = this->m_device->create_sampled_asset_image(BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16_SFLOAT, g_brx_sh_lut_width, g_brx_sh_lut_height, true, sh_lut_array_layer_count, 1U);
 
     {
         brx_pal_upload_command_buffer *const upload_command_buffer = this->m_device->create_upload_command_buffer();
@@ -246,10 +296,11 @@ void brx_anari_pal_device::init_lut_resource()
 
         graphics_command_buffer->begin();
 
-        BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE uploaded_asset_image_subresources[hdr_lut_subresource_count + sh_lut_subresource_count];
+        BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE uploaded_asset_image_subresources[hdr_lut_subresource_count + ltc_lut_subresource_count + sh_lut_subresource_count];
 
-        uint32_t hdr_lut_subresource_index_offset = 0U;
-        uint32_t sh_lut_subresource_index_offset = hdr_lut_subresource_count;
+        constexpr uint32_t const hdr_lut_subresource_index_offset = 0U;
+        constexpr uint32_t const ltc_lut_subresource_index_offset = hdr_lut_subresource_index_offset + hdr_lut_subresource_count;
+        constexpr uint32_t const sh_lut_subresource_index_offset = ltc_lut_subresource_index_offset + ltc_lut_subresource_count;
 
         for (uint32_t array_layer_index = 0U; array_layer_index < hdr_lut_array_layer_count; ++array_layer_index)
         {
@@ -257,7 +308,17 @@ void brx_anari_pal_device::init_lut_resource()
             {
                 uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, hdr_lut_mip_level_count, hdr_lut_array_layer_count);
 
-                uploaded_asset_image_subresources[hdr_lut_subresource_index_offset + subresource_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{this->m_lut_specular_hdr_fresnel_factors_asset_image, mip_level_index, array_layer_index};
+                uploaded_asset_image_subresources[hdr_lut_subresource_index_offset + subresource_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{this->m_lut_specular_hdr_fresnel_factor_asset_image, mip_level_index, array_layer_index};
+            }
+        }
+
+        for (uint32_t array_layer_index = 0U; array_layer_index < ltc_lut_array_layer_count; ++array_layer_index)
+        {
+            for (uint32_t mip_level_index = 0U; mip_level_index < ltc_lut_mip_level_count; ++mip_level_index)
+            {
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, ltc_lut_mip_level_count, ltc_lut_array_layer_count);
+
+                uploaded_asset_image_subresources[ltc_lut_subresource_index_offset + subresource_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{this->m_lut_specular_ltc_matrix_asset_image, mip_level_index, array_layer_index};
             }
         }
 
@@ -267,7 +328,7 @@ void brx_anari_pal_device::init_lut_resource()
             {
                 uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, sh_lut_mip_level_count, sh_lut_array_layer_count);
 
-                uploaded_asset_image_subresources[sh_lut_subresource_index_offset + subresource_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{this->m_lut_specular_transfer_function_sh_coefficients_asset_image, mip_level_index, array_layer_index};
+                uploaded_asset_image_subresources[sh_lut_subresource_index_offset + subresource_index] = BRX_PAL_SAMPLED_ASSET_IMAGE_SUBRESOURCE{this->m_lut_specular_transfer_function_sh_coefficient_asset_image, mip_level_index, array_layer_index};
             }
         }
 
@@ -280,6 +341,16 @@ void brx_anari_pal_device::init_lut_resource()
                 uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, hdr_lut_mip_level_count, hdr_lut_array_layer_count);
 
                 upload_command_buffer->upload_from_staging_upload_buffer_to_sampled_asset_image(&uploaded_asset_image_subresources[hdr_lut_subresource_index_offset + subresource_index], BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16_SFLOAT, g_brx_hdr_lut_width, g_brx_hdr_lut_height, hdr_lut_image_staging_upload_buffer, hdr_lut_subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset, hdr_lut_subresource_memcpy_dests[subresource_index].output_row_pitch, hdr_lut_subresource_memcpy_dests[subresource_index].output_row_count);
+            }
+        }
+
+        for (uint32_t array_layer_index = 0U; array_layer_index < ltc_lut_array_layer_count; ++array_layer_index)
+        {
+            for (uint32_t mip_level_index = 0U; mip_level_index < ltc_lut_mip_level_count; ++mip_level_index)
+            {
+                uint32_t const subresource_index = brx_pal_sampled_asset_image_import_calculate_subresource_index(mip_level_index, array_layer_index, 0U, ltc_lut_mip_level_count, ltc_lut_array_layer_count);
+
+                upload_command_buffer->upload_from_staging_upload_buffer_to_sampled_asset_image(&uploaded_asset_image_subresources[ltc_lut_subresource_index_offset + subresource_index], BRX_PAL_SAMPLED_ASSET_IMAGE_FORMAT_R16G16B16A16_SFLOAT, g_brx_ltc_lut_width, g_brx_ltc_lut_height, ltc_lut_image_staging_upload_buffer, ltc_lut_subresource_memcpy_dests[subresource_index].staging_upload_buffer_offset, ltc_lut_subresource_memcpy_dests[subresource_index].output_row_pitch, ltc_lut_subresource_memcpy_dests[subresource_index].output_row_count);
             }
         }
 
@@ -325,6 +396,9 @@ void brx_anari_pal_device::init_lut_resource()
 
     this->m_device->destroy_staging_upload_buffer(hdr_lut_image_staging_upload_buffer);
     hdr_lut_image_staging_upload_buffer = NULL;
+
+    this->m_device->destroy_staging_upload_buffer(ltc_lut_image_staging_upload_buffer);
+    ltc_lut_image_staging_upload_buffer = NULL;
 
     this->m_device->destroy_staging_upload_buffer(sh_lut_image_staging_upload_buffer);
     sh_lut_image_staging_upload_buffer = NULL;

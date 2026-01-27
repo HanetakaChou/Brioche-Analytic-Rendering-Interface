@@ -15,8 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#ifndef _DEFORMING_RESOURCE_BINDING_BSLI_
-#define _DEFORMING_RESOURCE_BINDING_BSLI_ 1
+#ifndef _DEFORMING_SURFACE_RESOURCE_BINDING_BSLI_
+#define _DEFORMING_SURFACE_RESOURCE_BINDING_BSLI_ 1
 
 #include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
 #include "surface.bsli"
@@ -30,18 +30,18 @@
 // D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT 4096
 // Vulkan Core: maxUniformBufferRange 16384 = 16 * 1024
 // Vulkan Roadmap 2022: maxUniformBufferRange 65536 = 16 * 4096
-#define DEFORMING_MAX_MORPH_TARGET_WEIGHT_COUNT 24u
-#define DEFORMING_MAX_JOINT_COUNT 2045u
+#define DEFORMING_SURFACE_MAX_MORPH_TARGET_WEIGHT_COUNT 24u
+#define DEFORMING_SURFACE_MAX_JOINT_COUNT 2045u
 
-brx_cbuffer(deforming_per_surface_group_update_set_uniform_buffer_binding, 0, 0)
+brx_cbuffer(deforming_surface_group_update_set_uniform_buffer_binding, 0, 0)
 {
-    brx_float4 g_packed_vector_morph_target_weights[brx_int(DEFORMING_MAX_MORPH_TARGET_WEIGHT_COUNT) / 4];
-    brx_float4 g_dual_quaternions[2 * brx_int(DEFORMING_MAX_JOINT_COUNT)];
+    brx_float4 g_packed_vector_morph_target_weights[brx_int(DEFORMING_SURFACE_MAX_MORPH_TARGET_WEIGHT_COUNT) / 4];
+    brx_float4 g_dual_quaternions[2 * brx_int(DEFORMING_SURFACE_MAX_JOINT_COUNT)];
 };
 
-brx_read_only_byte_address_buffer_table(g_surface_input_buffers, 1, 0, 43);
+brx_read_only_byte_address_buffer_table(t_deforming_surface_input_buffers, 1, 0, 43);
 
-brx_write_only_byte_address_buffer_table(g_surface_output_buffers, 1, 1, 2);
+brx_write_only_byte_address_buffer_table(u_deforming_surface_output_buffers, 1, 1, 2);
 
 #define deforming_root_signature_macro                                                              \
     brx_root_signature_root_parameter_begin(deforming_root_signature_name)                          \

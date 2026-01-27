@@ -10,7 +10,8 @@
         - [x] [Skinning Deformation](https://github.com/HanetakaChou/Dual-Quaternion-Linear-Blending)  
         - [ ] Ray Tracing Acceleration Structure  
 - [ ] Light  
-    - [ ] [HDRI](https://github.com/HanetakaChou/Environment-Lighting)  
+    - [ ] [Quad](https://github.com/HanetakaChou/Linearly-Transformed-Cosine)  
+    - [ ] [HDRI](https://github.com/HanetakaChou/Spherical-Harmonic)  
         - [x] [Equirectangular (Latitude-Longitude) Map](https://www.pbr-book.org/3ed-2018/Light_Sources/Infinite_Area_Lights)  
         - [x] [Octahedral Map](https://www.pbr-book.org/4ed/Light_Sources/Infinite_Area_Lights#ImageInfiniteLights)  
         - [ ] [~~Cube Map~~](https://dev.epicgames.com/documentation/en-us/unreal-engine/creating-cubemaps?application_version=4.27)  

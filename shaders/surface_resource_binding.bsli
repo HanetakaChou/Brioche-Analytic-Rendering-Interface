@@ -1,0 +1,103 @@
+//
+// Copyright (C) YuqiaoZhang(HanetakaChou)
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+//
+
+#ifndef _SURFACE_RESOURCE_BINDING_BSLI_
+#define _SURFACE_RESOURCE_BINDING_BSLI_ 1
+
+#include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
+#include "../../Voxel-Cone-Tracing/include/brx_voxel_cone_tracing.h"
+#include "none_update_descriptor_set.bsli"
+#include "configuration_constant.bsli"
+#include "surface.bsli"
+
+// 1 0 4 -> 1 0 Surface_Buffer_Count
+// 1 4 4 -> 1 Surface_Buffer_Count Surface_Texture_Count
+
+brx_cbuffer(surface_group_update_set_uniform_buffer_binding, 1, 0)
+{
+    brx_column_major brx_float4x4 g_model_transform;
+};
+
+brx_read_only_byte_address_buffer_table(t_surface_buffers, 2, 0, 4);
+
+brx_texture_2d_table(t_surface_images, 2, 4, 4);
+
+#define forward_shading_root_signature_macro                                                            \
+    brx_root_signature_root_parameter_begin(forward_shading_root_signature_name)                        \
+    brx_root_signature_root_descriptor_table_uav(0, 0, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 1, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 2, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 3, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 4, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 5, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_cbv(0, 6) brx_root_signature_root_parameter_split                           \
+    brx_root_signature_root_descriptor_table_srv(0, 7, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_sampler(0, 8, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_descriptor_table_sampler(0, 9, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_descriptor_table_srv(0, 10, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 11, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 12, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 13, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 14, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 15, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 16, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 17, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 18, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 19, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 20, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 21, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 22, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 23, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 24, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
+    brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \
+    brx_root_signature_root_parameter_end
+
+#define brx_voxel_cone_tracing_voxelization_root_signature_macro                                        \
+    brx_root_signature_root_parameter_begin(brx_voxel_cone_tracing_voxelization_root_signature_name)    \
+    brx_root_signature_root_descriptor_table_uav(0, 0, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 1, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 2, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 3, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 4, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_uav(0, 5, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_cbv(0, 6) brx_root_signature_root_parameter_split                           \
+    brx_root_signature_root_descriptor_table_srv(0, 7, 1) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_sampler(0, 8, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_descriptor_table_sampler(0, 9, 1) brx_root_signature_root_parameter_split   \
+    brx_root_signature_root_descriptor_table_srv(0, 10, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 11, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 12, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 13, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 14, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 15, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 16, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 17, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 18, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 19, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 20, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 21, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 22, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 23, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_descriptor_table_srv(0, 24, 1) brx_root_signature_root_parameter_split      \
+    brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
+    brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \
+    brx_root_signature_root_parameter_end
+
+#endif

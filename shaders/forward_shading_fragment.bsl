@@ -15,12 +15,45 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "forward_shading_resource_binding.bsli"
+#include "surface_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_math_consts.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_brdf.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
+#include "../../Hemispherical-Directional-Reflectance/shaders/brx_hemispherical_directional_reflectance.bsli"
+#include "../../Linearly-Transformed-Cosine/shaders/brx_linearly_transformed_cosine_attenuation.bsli"
+#include "../../Linearly-Transformed-Cosine/shaders/brx_linearly_transformed_cosine_radiance.bsli"
 #include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_diffuse_radiance.bsli"
 #include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_specular_radiance.bsli"
+
+brx_int2 brx_hdr_application_bridge_get_specular_fresnel_factor_lut_dimension()
+{
+    return brx_texture_2d_get_dimension(t_lut_specular_hdr_fresnel_factor, 0);
+}
+
+brx_float2 brx_hdr_application_bridge_get_specular_fresnel_factor_lut(in brx_float2 in_lut_uv)
+{
+    return brx_sample_level_2d(t_lut_specular_hdr_fresnel_factor, s_clamp_sampler, in_lut_uv, 0.0).xy;
+}
+
+brx_int2 brx_ltc_application_bridge_get_specular_matrix_lut_dimension()
+{
+    return brx_texture_2d_get_dimension(t_lut_specular_ltc_matrix, 0);
+}
+
+brx_float4 brx_ltc_application_bridge_get_specular_matrix_lut(in brx_float2 in_lut_uv)
+{
+    return brx_sample_level_2d(t_lut_specular_ltc_matrix, s_clamp_sampler, in_lut_uv, 0.0);
+}
+
+brx_int3 brx_sh_application_bridge_get_specular_transfer_function_sh_coefficient_lut_dimension()
+{
+    return brx_texture_2d_array_get_dimension(t_lut_specular_transfer_function_sh_coefficient, 0);
+}
+
+brx_float brx_sh_application_bridge_get_specular_transfer_function_sh_coefficient_lut(in brx_float2 in_lut_uv, brx_int in_sh_coefficient_index)
+{
+    return brx_sample_level_2d_array(t_lut_specular_transfer_function_sh_coefficient, s_clamp_sampler, brx_float3(in_lut_uv, brx_float(in_sh_coefficient_index)), 0.0).x;
+}
 
 brx_root_signature(forward_shading_root_signature_macro, forward_shading_root_signature_name)
 brx_early_depth_stencil
@@ -37,10 +70,11 @@ brx_pixel_shader_parameter_out(brx_float4, out_gbuffer_base_color, 3) brx_pixel_
 brx_pixel_shader_parameter_out(brx_float4, out_gbuffer_roughness_metallic, 4)
 brx_pixel_shader_parameter_end(main)
 {
+    brx_float3 surface_position_world_space = in_interpolated_position_world_space;
+
     brx_float3 camera_ray_direction;
     {
         brx_float3 camera_ray_origin = brx_mul(g_inverse_view_transform, brx_float4(0.0, 0.0, 0.0, 1.0)).xyz;
-        brx_float3 surface_position_world_space = in_interpolated_position_world_space;
         camera_ray_direction = brx_normalize(surface_position_world_space - camera_ray_origin);
     }
 
@@ -83,7 +117,7 @@ brx_pixel_shader_parameter_end(main)
             brx_float3 bitangent_world_space = brx_cross(geometry_normal_world_space, tangent_world_space) * ((in_interpolated_tangent.w >= 0.0) ? 1.0 : -1.0);
 
             // ["5.20.3. material.normalTextureInfo.scale" of "glTF 2.0 Specification"](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_material_normaltextureinfo_scale)
-            brx_float3 shading_normal_tangent_space = brx_normalize((brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_NORMAL_TEXTURE_INDEX], s_sampler, texcoord).xyz * 2.0 - brx_float3(1.0, 1.0, 1.0)) * brx_float3(normal_scale, normal_scale, 1.0));
+            brx_float3 shading_normal_tangent_space = brx_normalize((brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_NORMAL_TEXTURE_INDEX], s_wrap_sampler, texcoord).xyz * 2.0 - brx_float3(1.0, 1.0, 1.0)) * brx_float3(normal_scale, normal_scale, 1.0));
 
             surface_shading_normal_world_space = brx_normalize(tangent_world_space * shading_normal_tangent_space.x + bitangent_world_space * shading_normal_tangent_space.y + geometry_normal_world_space * shading_normal_tangent_space.z);
         }
@@ -95,7 +129,7 @@ brx_pixel_shader_parameter_end(main)
         brx_float4 base_color_and_opacity;
         brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_BASE_COLOR))
         {
-            base_color_and_opacity = base_color_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_BASE_COLOR_TEXTURE_INDEX], s_sampler, texcoord);
+            base_color_and_opacity = base_color_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_BASE_COLOR_TEXTURE_INDEX], s_wrap_sampler, texcoord);
         }
         else
         {
@@ -110,7 +144,7 @@ brx_pixel_shader_parameter_end(main)
 
         brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_METALLIC_ROUGHNESS))
         {
-            brx_float2 roughness_metallic = brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_METALLIC_ROUGHNESS_TEXTURE_INDEX], s_sampler, texcoord).yz;
+            brx_float2 roughness_metallic = brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_METALLIC_ROUGHNESS_TEXTURE_INDEX], s_wrap_sampler, texcoord).yz;
             surface_roughness = roughness_factor * roughness_metallic.x;
             surface_metallic = metallic_factor * roughness_metallic.y;
         }
@@ -129,7 +163,7 @@ brx_pixel_shader_parameter_end(main)
 
         brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_EMISSIVE))
         {
-            surface_emissive = emissive_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_EMISSIVE_TEXTURE_INDEX], s_sampler, texcoord).xyz;
+            surface_emissive = emissive_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_EMISSIVE_TEXTURE_INDEX], s_wrap_sampler, texcoord).xyz;
         }
         else
         {
@@ -192,140 +226,71 @@ brx_pixel_shader_parameter_end(main)
         }
     }
 
-    // TODO: shadow
+    brx_float3 outgoing_direction_world_space = -camera_ray_direction;
+
+    brx_float INTERNAL_IRRADIANCE_THRESHOLD = 1e-4;
+    brx_float INTERNAL_ATTENUATION_THRESHOLD = 1e-4;
+
+    // TODO: directional lighting & shadow
     brx_float3 direct_radiance = brx_float3(0.0, 0.0, 0.0);
+    brx_float3 ambient_radiance = brx_float3(0.0, 0.0, 0.0);
 
-#if 0
-    const brx_int incident_light_count = 8;
-
-    const brx_float3 incident_illuminances[incident_light_count] = brx_array_constructor_begin(brx_float3, incident_light_count)
-        brx_float3(0.7, 0.7, 0.7) brx_array_constructor_split
-        brx_float3(0.7, 0.7, 0.7) brx_array_constructor_split
-        brx_float3(0.7, 0.7, 0.7) brx_array_constructor_split
-        brx_float3(0.7, 0.7, 0.7) brx_array_constructor_split
-        brx_float3(0.3, 0.3, 0.3) brx_array_constructor_split
-        brx_float3(0.3, 0.3, 0.3) brx_array_constructor_split
-        brx_float3(0.3, 0.3, 0.3) brx_array_constructor_split
-        brx_float3(0.3, 0.3, 0.3)
-        brx_array_constructor_end;
-
-    const brx_float3 Ls[incident_light_count] = brx_array_constructor_begin(brx_float3, incident_light_count)
-        brx_float3(1.0, 1.0, 1.0) brx_array_constructor_split
-        brx_float3(1.0, 1.0, -1.0) brx_array_constructor_split
-        brx_float3(-1.0, 1.0, 1.0) brx_array_constructor_split
-        brx_float3(-1.0, 1.0, -1.0) brx_array_constructor_split
-        brx_float3(1.0, -1.0, 1.0) brx_array_constructor_split
-        brx_float3(1.0, -1.0, -1.0) brx_array_constructor_split
-        brx_float3(-1.0, -1.0, 1.0) brx_array_constructor_split
-        brx_float3(-1.0, -1.0, -1.0)
-        brx_array_constructor_end;
-
-    brx_unroll for (brx_int incident_light_index = 0; incident_light_index < incident_light_count; ++incident_light_index)
-    {
-        brx_float3 N = surface_shading_normal_world_space;
-        brx_float3 L = brx_normalize(Ls[incident_light_index]);
-        brx_float NdotL = brx_dot(N, L);
-
-        brx_branch if (NdotL > 0.0)
-        {
-            brx_float3 incident_illuminance = incident_illuminances[incident_light_index];
-
-            brx_float3 V = -camera_ray_direction;
-            brx_float NdotV = brx_dot(N, V);
-
-            // brx_branch if (NdotV > 0.0)
-            {
-                brx_float3 diffuse_brdf = brx_normalized_clamped_cosine_brdf(surface_diffuse_color);
-
-                brx_float3 specular_brdf;
-                {
-                    brx_float VdotL = brx_dot(V, L);
-
-                    // Real-Time Rendering Fourth Edition / 9.8 BRDF Models for Surface Reflection / [Hammon 2017]
-                    // UE4: [Init](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L31)
-                    // U3D: [GetBSDFAngle](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/CommonLighting.hlsl#L361)
-                    brx_float invLenH = brx_rsqrt(2.0 + 2.0 * VdotL);
-                    brx_float NdotH = brx_clamp((NdotL + NdotV) * invLenH, 0.0, 1.0);
-                    brx_float LdotH = brx_clamp(invLenH * VdotL + invLenH, 0.0, 1.0);
-
-                    brx_float VdotH = LdotH;
-
-                    // Real-Time Rendering Fourth Edition / 9.8.1 Normal Distribution Functions: "In the Disney principled shading model, Burley[214] exposes the surface_roughness control to users as g = r2, where r is the user-interface surface_roughness parameter value between 0 and 1."
-                    brx_float alpha = surface_roughness * surface_roughness;
-
-                    brx_float3 f0 = surface_specular_color;
-                    const brx_float3 f90 = brx_float3(1.0, 1.0, 1.0);
-
-                    specular_brdf = brx_trowbridge_reitz_brdf(alpha, NdotH, NdotV, NdotL, f0, f90, VdotH);
-                }
-
-                direct_radiance += (diffuse_brdf + specular_brdf) * (NdotL * incident_illuminance);
-            }
-        }
-    }
-#endif
-
-#if 0
-    const brx_int outgoing_direction_count = 6;
-
-    const brx_float3 outgoing_directions[outgoing_direction_count] =
-        brx_array_constructor_begin(brx_float3, outgoing_direction_count)
-        // 0
-        brx_float3(1.0, 0.0, 0.0) brx_array_constructor_split
-        // 1
-        brx_float3(0.0, 1.0, 0.0) brx_array_constructor_split
-        // 2
-        brx_float3(0.0, 0.0, 1.0) brx_array_constructor_split
-        // 3
-        brx_float3(-1.0, 0.0, 0.0) brx_array_constructor_split
-        // 4
-        brx_float3(0.0, -1.0, 0.0) brx_array_constructor_split
-        // 5
-        brx_float3(0.0, 0.0, -1.0)
-        brx_array_constructor_end;
-
-    brx_unroll for (brx_int outgoing_direction_index = 0; outgoing_direction_index < outgoing_direction_count; ++outgoing_direction_index)
-    {
-        brx_float3 L = surface_shading_normal_world_space;
-
-        brx_float3 V = outgoing_directions[outgoing_direction_index];
-        brx_float3 N = surface_shading_normal_world_space;
-        brx_float NdotL = brx_dot(N, L);
-        brx_float NdotV = brx_dot(N, V);
-
-        brx_branch if ((NdotL > 0.0) && (NdotV > 0.0))
-        {
-            brx_float3 specular_brdf;
-            {
-                brx_float VdotL = brx_dot(V, L);
-
-                // Real-Time Rendering Fourth Edition / 9.8 BRDF Models for Surface Reflection / [Hammon 2017]
-                // UE4: [Init](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L31)
-                // U3D: [GetBSDFAngle](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/CommonLighting.hlsl#L361)
-                brx_float invLenH = brx_rsqrt(2.0 + 2.0 * VdotL);
-                brx_float NdotH = brx_clamp((NdotL + NdotV) * invLenH, 0.0, 1.0);
-                brx_float LdotH = brx_clamp(invLenH * VdotL + invLenH, 0.0, 1.0);
-
-                brx_float VdotH = LdotH;
-
-                // Real-Time Rendering Fourth Edition / 9.8.1 Normal Distribution Functions: "In the Disney principled shading model, Burley[214] exposes the surface_roughness control to users as g = r2, where r is the user-interface surface_roughness parameter value between 0 and 1."
-                brx_float alpha = surface_roughness * surface_roughness;
-
-                brx_float3 f0 = surface_specular_color;
-                const brx_float3 f90 = brx_float3(1.0, 1.0, 1.0);
-
-                specular_brdf = brx_trowbridge_reitz_brdf(alpha, NdotH, NdotV, NdotL, f0, f90, VdotH);
-            }
-
-            direct_radiance += specular_brdf;
-        }
-    }
-#endif
-
+    // Emissive
     direct_radiance += surface_emissive;
 
+    // Albedo
+    brx_float3 surface_diffuse_albedo;
+    brx_float3 surface_specular_albedo;
+    brx_branch if((g_area_lighting_count > 0) || ((ENVIRONMENT_MAP_LAYOUT_EQUIRECTANGULAR == g_environment_map_layout) || (ENVIRONMENT_MAP_LAYOUT_OCTAHEDRAL == g_environment_map_layout)))
+    {
+        surface_diffuse_albedo = surface_diffuse_color;
+        surface_specular_albedo = brx_hdr_specular_albedo(surface_specular_color, surface_roughness, surface_shading_normal_world_space, outgoing_direction_world_space);
+    }
+    else
+    {
+        surface_diffuse_albedo = brx_float3(0.0, 0.0, 0.0);
+        surface_specular_albedo = brx_float3(0.0, 0.0, 0.0);       
+    }
+
+    // Area Lighting
+    brx_loop for (brx_int area_lighting_index = 0; area_lighting_index < g_area_lighting_count; ++area_lighting_index)
+    {
+        brx_float4 area_lighting_auxiliary_packed_vectors[3] = brx_array_constructor_begin(brx_float4, 3)
+            g_area_lightings[3 * area_lighting_index + 0] brx_array_constructor_split
+            g_area_lightings[3 * area_lighting_index + 1] brx_array_constructor_split
+            g_area_lightings[3 * area_lighting_index + 2] brx_array_constructor_end;
+
+        brx_float3 area_lighting_position = area_lighting_auxiliary_packed_vectors[0].xyz;
+        brx_float3 area_lighting_edge1 = area_lighting_auxiliary_packed_vectors[1].xyz;
+        brx_float3 area_lighting_edge2 = area_lighting_auxiliary_packed_vectors[2].xyz;
+
+        // https://github.com/AcademySoftwareFoundation/Imath/blob/main/src/Imath/half.h
+        // HALF_MAX 65504.0
+        brx_float3 area_lighting_radiance = brx_clamp(brx_float3(area_lighting_auxiliary_packed_vectors[0].w, area_lighting_auxiliary_packed_vectors[1].w, area_lighting_auxiliary_packed_vectors[2].w), brx_float3(0.0, 0.0, 0.0), brx_float3(65504.0, 65504.0, 65504.0));
+
+        brx_float3 quad_vertices_world_space[4] = brx_array_constructor_begin(brx_float3, 4)
+            area_lighting_position brx_array_constructor_split
+            (area_lighting_position + area_lighting_edge1) brx_array_constructor_split
+            (area_lighting_position + area_lighting_edge1 + area_lighting_edge2) brx_array_constructor_split
+            (area_lighting_position + area_lighting_edge2) brx_array_constructor_end;
+
+        brx_float quad_culling_range;
+        {
+            brx_float quad_area = brx_length(brx_cross(quad_vertices_world_space[1] - quad_vertices_world_space[0], quad_vertices_world_space[3] - quad_vertices_world_space[0]));
+            brx_float maximum_area_lighting_radiance = brx_max(brx_max(area_lighting_radiance.x, area_lighting_radiance.y), area_lighting_radiance.z);
+
+            quad_culling_range = brx_sqrt((maximum_area_lighting_radiance * quad_area) / INTERNAL_IRRADIANCE_THRESHOLD);
+        }
+
+        brx_float area_lighting_attenuation = brx_ltc_attenuation(quad_culling_range, surface_position_world_space, quad_vertices_world_space);
+
+        brx_branch if (area_lighting_attenuation > INTERNAL_ATTENUATION_THRESHOLD)
+        {
+            direct_radiance += (area_lighting_attenuation * brx_ltc_radiance(surface_diffuse_albedo, surface_specular_albedo, surface_roughness, surface_shading_normal_world_space, outgoing_direction_world_space, area_lighting_radiance, surface_position_world_space, quad_vertices_world_space));
+        }
+    }
+
     // Environment Lighting
-    brx_float3 ambient_radiance;
     brx_branch if ((ENVIRONMENT_MAP_LAYOUT_EQUIRECTANGULAR == g_environment_map_layout) || (ENVIRONMENT_MAP_LAYOUT_OCTAHEDRAL == g_environment_map_layout))
     {
         brx_float3 environment_map_sh_coefficients[BRX_SH_COEFFICIENT_COUNT];
@@ -334,63 +299,15 @@ brx_pixel_shader_parameter_end(main)
             environment_map_sh_coefficients[environment_map_sh_coefficient_index] = brx_uint_as_float(brx_byte_address_buffer_load3(t_environment_map_sh_coefficients, (3 * (environment_map_sh_coefficient_index << 2))));
         }
 
-        brx_float3 outgoing_direction_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(-camera_ray_direction, 0.0)).xyz;
+        brx_float3 outgoing_direction_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(outgoing_direction_world_space, 0.0)).xyz;
 
         brx_float3 shading_normal_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(surface_shading_normal_world_space, 0.0)).xyz;
-
-        brx_float3 surface_diffuse_albedo = surface_diffuse_color;
-
-        brx_float3 surface_specular_albedo;
-        brx_float non_rotation_transfer_function_lut_sh_coefficients[BRX_SH_PROJECTION_TRANSFER_FUNCTION_LUT_SH_COEFFICIENT_COUNT];
-        {
-            brx_float surface_alpha = brx_max(brx_float(BRX_TROWBRIDGE_REITZ_ALPHA_MINIMUM), surface_roughness * surface_roughness);
-            brx_float NdotV = brx_max(brx_float(BRX_TROWBRIDGE_REITZ_NDOTV_MINIMUM), brx_dot(shading_normal_environment_map_space, outgoing_direction_environment_map_space));
-
-            brx_float2 raw_lut_uv = brx_float2(brx_max(0.0, 1.0 - NdotV), brx_max(0.0, 1.0 - surface_alpha));
-
-            {
-                // Remap: [0, 1] -> [0.5/size, 1.0 - 0.5/size]
-                // U3D: [Remap01ToHalfTexelCoord](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl#L661)
-                // UE4: [N/A](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/RectLight.ush#L450)
-                brx_int2 specular_hdr_fresnel_factors_lut_dimension = brx_texture_2d_get_dimension(t_lut_specular_hdr_fresnel_factors, 0);
-                brx_float2 specular_hdr_fresnel_factors_lut_uv = (brx_float2(0.5, 0.5) + brx_float2(specular_hdr_fresnel_factors_lut_dimension.x - 1, specular_hdr_fresnel_factors_lut_dimension.y - 1) * raw_lut_uv) / brx_float2(specular_hdr_fresnel_factors_lut_dimension.x, specular_hdr_fresnel_factors_lut_dimension.y);
-
-                brx_float2 fresnel_factor = brx_sample_level_2d(t_lut_specular_hdr_fresnel_factors, s_sampler, specular_hdr_fresnel_factors_lut_uv, 0.0).xy;
-                brx_float f0_factor = fresnel_factor.x;
-                brx_float f90_factor = fresnel_factor.y;
-
-                // UE4: [EnvBRDF](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L476)
-                brx_float3 f0 = surface_specular_color;
-                brx_float f90 = brx_clamp(50.0 * f0.g, 0.0, 1.0);
-
-                // UE4: [EnvBRDF](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L471)
-                // U3D: [GetPreIntegratedFGDGGXAndDisneyDiffuse](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.high-definition/Runtime/Material/PreIntegratedFGD/PreIntegratedFGD.hlsl#L8)
-                surface_specular_albedo = f0 * f0_factor + brx_float3(f90, f90, f90) * f90_factor;
-            }
-
-            {
-                // Remap: [0, 1] -> [0.5/size, 1.0 - 0.5/size]
-                // U3D: [Remap01ToHalfTexelCoord](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl#L661)
-                // UE4: [N/A](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/RectLight.ush#L450)
-                brx_int3 specular_transfer_function_sh_coefficients_lut_dimension = brx_texture_2d_array_get_dimension(t_lut_specular_transfer_function_sh_coefficients, 0);
-                brx_float2 specular_transfer_function_sh_coefficients_lut_uv = (brx_float2(0.5, 0.5) + brx_float2(specular_transfer_function_sh_coefficients_lut_dimension.x - 1, specular_transfer_function_sh_coefficients_lut_dimension.y - 1) * raw_lut_uv) / brx_float2(specular_transfer_function_sh_coefficients_lut_dimension.x, specular_transfer_function_sh_coefficients_lut_dimension.y);
-
-                brx_unroll for (brx_int transfer_function_lut_sh_coefficient_index = 0; transfer_function_lut_sh_coefficient_index < BRX_SH_PROJECTION_TRANSFER_FUNCTION_LUT_SH_COEFFICIENT_COUNT; ++transfer_function_lut_sh_coefficient_index)
-                {
-                    non_rotation_transfer_function_lut_sh_coefficients[transfer_function_lut_sh_coefficient_index] = brx_sample_level_2d_array(t_lut_specular_transfer_function_sh_coefficients, s_sampler, brx_float3(specular_transfer_function_sh_coefficients_lut_uv, brx_float(transfer_function_lut_sh_coefficient_index)), 0.0).x;
-                }
-            }
-        }
-
+        
         brx_float3 environment_lighting_diffuse_radiance = brx_sh_diffuse_radiance(surface_diffuse_albedo, shading_normal_environment_map_space, environment_map_sh_coefficients);
 
-        brx_float3 environment_lighting_specular_radiance = brx_sh_specular_radiance(surface_specular_albedo, outgoing_direction_environment_map_space, shading_normal_environment_map_space, non_rotation_transfer_function_lut_sh_coefficients, environment_map_sh_coefficients);
+        brx_float3 environment_lighting_specular_radiance = brx_sh_specular_radiance(surface_specular_albedo, surface_roughness, shading_normal_environment_map_space, outgoing_direction_environment_map_space, environment_map_sh_coefficients);
 
-        ambient_radiance = environment_lighting_diffuse_radiance + environment_lighting_specular_radiance;
-    }
-    else
-    {
-        ambient_radiance = brx_float3(0.0, 0.0, 0.0);
+        ambient_radiance += (environment_lighting_diffuse_radiance + environment_lighting_specular_radiance);
     }
 
     out_direct_radiance = brx_float4(direct_radiance, surface_opacity);

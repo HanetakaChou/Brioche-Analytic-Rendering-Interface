@@ -29,8 +29,8 @@
 #error Unknown Compiler
 #endif
 #include "../shaders/surface.bsli"
-#include "../shaders/deforming_resource_binding.bsli"
-#include "../shaders/forward_shading_resource_binding.bsli"
+#include "../shaders/deforming_surface_resource_binding.bsli"
+#include "../shaders/surface_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/include/brx_packed_vector.h"
 #include "../../Brioche-Shader-Language/include/brx_octahedral_mapping.h"
 #include <cstring>
@@ -117,26 +117,26 @@ inline brx_pal_storage_intermediate_buffer *brx_anari_pal_device::create_deformi
     return this->m_device->create_storage_intermediate_buffer(sizeof(surface_vertex_varying_buffer_element) * vertex_count);
 }
 
-inline brx_pal_uniform_upload_buffer *brx_anari_pal_device::create_deforming_per_surface_group_update_set_uniform_buffer()
+inline brx_pal_uniform_upload_buffer *brx_anari_pal_device::create_deforming_surface_group_update_set_uniform_buffer()
 {
-    return this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<deforming_per_surface_group_update_set_uniform_buffer_binding>());
+    return this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<deforming_surface_group_update_set_uniform_buffer_binding>());
 }
 
-inline brx_pal_descriptor_set *brx_anari_pal_device::create_deforming_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer)
+inline brx_pal_descriptor_set *brx_anari_pal_device::create_deforming_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer)
 {
-    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_deforming_descriptor_set_layout_per_surface_group_update, 0U);
+    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_deforming_surface_group_update_descriptor_set_layout, 0U);
 
     assert(NULL != uniform_buffer);
 
-    constexpr uint32_t const dynamic_uniform_buffer_range = sizeof(deforming_per_surface_group_update_set_uniform_buffer_binding);
+    constexpr uint32_t const dynamic_uniform_buffer_range = sizeof(deforming_surface_group_update_set_uniform_buffer_binding);
     this->m_device->write_descriptor_set(descriptor_set, 0U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &uniform_buffer, &dynamic_uniform_buffer_range, NULL, NULL, NULL, NULL, NULL, NULL);
 
     return descriptor_set;
 }
 
-inline brx_pal_descriptor_set *brx_anari_pal_device::create_deforming_per_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const vertex_blending_buffer, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_position_buffers, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_varying_buffers, brx_pal_storage_buffer const *const vertex_position_buffer_instance, brx_pal_storage_buffer const *const vertex_varying_buffer_instance)
+inline brx_pal_descriptor_set *brx_anari_pal_device::create_deforming_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const vertex_blending_buffer, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_position_buffers, brx_pal_read_only_storage_buffer const *const *const morph_targets_vertex_varying_buffers, brx_pal_storage_buffer const *const vertex_position_buffer_instance, brx_pal_storage_buffer const *const vertex_varying_buffer_instance)
 {
-    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_deforming_descriptor_set_layout_per_surface_update, 0U);
+    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_deforming_surface_update_descriptor_set_layout, 0U);
 
     assert(NULL != vertex_position_buffer);
     assert(NULL != vertex_varying_buffer);
@@ -163,26 +163,26 @@ inline brx_pal_descriptor_set *brx_anari_pal_device::create_deforming_per_surfac
     return descriptor_set;
 }
 
-inline brx_pal_uniform_upload_buffer *brx_anari_pal_device::create_forward_shading_per_surface_group_update_set_uniform_buffer()
+inline brx_pal_uniform_upload_buffer *brx_anari_pal_device::create_surface_group_update_set_uniform_buffer()
 {
-    return this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<forward_shading_per_surface_group_update_set_uniform_buffer_binding>());
+    return this->m_device->create_uniform_upload_buffer(this->helper_compute_uniform_buffer_size<surface_group_update_set_uniform_buffer_binding>());
 }
 
-inline brx_pal_descriptor_set *brx_anari_pal_device::create_forward_shading_per_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer)
+inline brx_pal_descriptor_set *brx_anari_pal_device::create_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer)
 {
-    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_forward_shading_descriptor_set_layout_per_surface_group_update, 0U);
+    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_surface_group_update_descriptor_set_layout, 0U);
 
     assert(NULL != uniform_buffer);
 
-    constexpr uint32_t const dynamic_uniform_buffer_range = sizeof(forward_shading_per_surface_group_update_set_uniform_buffer_binding);
+    constexpr uint32_t const dynamic_uniform_buffer_range = sizeof(surface_group_update_set_uniform_buffer_binding);
     this->m_device->write_descriptor_set(descriptor_set, 0U, BRX_PAL_DESCRIPTOR_TYPE_DYNAMIC_UNIFORM_BUFFER, 0U, 1U, &uniform_buffer, &dynamic_uniform_buffer_range, NULL, NULL, NULL, NULL, NULL, NULL);
 
     return descriptor_set;
 }
 
-inline brx_pal_descriptor_set *brx_anari_pal_device::create_forward_shading_per_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image)
+inline brx_pal_descriptor_set *brx_anari_pal_device::create_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image)
 {
-    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_forward_shading_descriptor_set_layout_per_surface_update, 0U);
+    brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_surface_update_descriptor_set_layout, 0U);
 
     assert(NULL != vertex_position_buffer);
     assert(NULL != vertex_varying_buffer);
@@ -275,7 +275,7 @@ void brx_anari_pal_device::world_release_surface_group_instance(brx_anari_surfac
     mcrt_free(delete_unwrapped_surface_group_instance);
 }
 
-inline brx_anari_pal_surface::brx_anari_pal_surface() : m_vertex_count(0U), m_vertex_position_buffer(NULL), m_vertex_varying_buffer(NULL), m_vertex_blending_buffer(NULL), m_morph_targets_vertex_position_buffers{}, m_morph_targets_vertex_varying_buffers{}, m_index_count(0U), m_index_buffer(NULL), m_emissive_image(NULL), m_normal_image(NULL), m_base_color_image(NULL), m_metallic_roughness_image(NULL), m_auxiliary_buffer(NULL), m_forward_shading_descriptor_set_per_surface_update(NULL)
+inline brx_anari_pal_surface::brx_anari_pal_surface() : m_vertex_count(0U), m_vertex_position_buffer(NULL), m_vertex_varying_buffer(NULL), m_vertex_blending_buffer(NULL), m_morph_targets_vertex_position_buffers{}, m_morph_targets_vertex_varying_buffers{}, m_index_count(0U), m_index_buffer(NULL), m_emissive_image(NULL), m_normal_image(NULL), m_base_color_image(NULL), m_metallic_roughness_image(NULL), m_auxiliary_buffer(NULL), m_surface_update_descriptor_set(NULL)
 {
 }
 
@@ -292,7 +292,7 @@ inline brx_anari_pal_surface::~brx_anari_pal_surface()
     assert(NULL == this->m_base_color_image);
     assert(NULL == this->m_metallic_roughness_image);
     assert(NULL == this->m_auxiliary_buffer);
-    assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+    assert(NULL == this->m_surface_update_descriptor_set);
 }
 
 inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_SURFACE const *surface)
@@ -680,16 +680,16 @@ inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_
 
         if (skin || morph_target)
         {
-            assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+            assert(NULL == this->m_surface_update_descriptor_set);
         }
         else
         {
-            assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+            assert(NULL == this->m_surface_update_descriptor_set);
             assert(NULL != this->m_vertex_position_buffer);
             assert(NULL != this->m_vertex_varying_buffer);
             assert(NULL != this->m_index_buffer);
             assert(NULL != this->m_auxiliary_buffer);
-            this->m_forward_shading_descriptor_set_per_surface_update = device->create_forward_shading_per_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), this->m_index_buffer->get_read_only_storage_buffer(), this->m_auxiliary_buffer->get_read_only_storage_buffer(), (NULL != this->m_emissive_image) ? this->m_emissive_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_normal_image) ? this->m_normal_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_base_color_image) ? this->m_base_color_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_metallic_roughness_image) ? this->m_metallic_roughness_image->get_image()->get_sampled_image() : NULL);
+            this->m_surface_update_descriptor_set = device->create_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), this->m_index_buffer->get_read_only_storage_buffer(), this->m_auxiliary_buffer->get_read_only_storage_buffer(), (NULL != this->m_emissive_image) ? this->m_emissive_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_normal_image) ? this->m_normal_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_base_color_image) ? this->m_base_color_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_metallic_roughness_image) ? this->m_metallic_roughness_image->get_image()->get_sampled_image() : NULL);
         }
     }
 }
@@ -700,13 +700,13 @@ inline void brx_anari_pal_surface::uninit(brx_anari_pal_device *device)
     {
         if (NULL != this->m_vertex_blending_buffer)
         {
-            assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+            assert(NULL == this->m_surface_update_descriptor_set);
         }
         else
         {
-            assert(NULL != this->m_forward_shading_descriptor_set_per_surface_update);
-            device->helper_destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_update);
-            this->m_forward_shading_descriptor_set_per_surface_update = NULL;
+            assert(NULL != this->m_surface_update_descriptor_set);
+            device->helper_destroy_descriptor_set(this->m_surface_update_descriptor_set);
+            this->m_surface_update_descriptor_set = NULL;
         }
     }
 
@@ -890,21 +890,21 @@ bool brx_anari_pal_surface::get_deforming() const
 
     if (skin || morph_target)
     {
-        assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+        assert(NULL == this->m_surface_update_descriptor_set);
         return true;
     }
     else
     {
 
-        assert(NULL != this->m_forward_shading_descriptor_set_per_surface_update);
+        assert(NULL != this->m_surface_update_descriptor_set);
         return false;
     }
 }
 
-brx_pal_descriptor_set const *brx_anari_pal_surface::get_forward_shading_per_surface_update_descriptor_set() const
+brx_pal_descriptor_set const *brx_anari_pal_surface::get_surface_update_descriptor_set() const
 {
     assert(!this->get_deforming());
-    return this->m_forward_shading_descriptor_set_per_surface_update;
+    return this->m_surface_update_descriptor_set;
 }
 
 inline brx_anari_pal_surface_group::brx_anari_pal_surface_group() : m_ref_count(0U), m_surfaces{}
@@ -967,7 +967,7 @@ brx_anari_pal_surface const *brx_anari_pal_surface_group::get_surfaces() const
     return this->m_surfaces.data();
 }
 
-inline brx_anari_pal_surface_instance::brx_anari_pal_surface_instance() : m_vertex_position_buffer(NULL), m_vertex_varying_buffer(NULL), m_deforming_descriptor_set_per_surface_update(NULL), m_forward_shading_descriptor_set_per_surface_update(NULL)
+inline brx_anari_pal_surface_instance::brx_anari_pal_surface_instance() : m_vertex_position_buffer(NULL), m_vertex_varying_buffer(NULL), m_deforming_surface_update_descriptor_set(NULL), m_surface_update_descriptor_set(NULL)
 {
 }
 
@@ -975,8 +975,8 @@ inline brx_anari_pal_surface_instance::~brx_anari_pal_surface_instance()
 {
     assert(NULL == this->m_vertex_position_buffer);
     assert(NULL == this->m_vertex_varying_buffer);
-    assert(NULL == this->m_deforming_descriptor_set_per_surface_update);
-    assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+    assert(NULL == this->m_deforming_surface_update_descriptor_set);
+    assert(NULL == this->m_surface_update_descriptor_set);
 }
 
 inline void brx_anari_pal_surface_instance::init(brx_anari_pal_device *device, brx_anari_pal_surface const *surface)
@@ -991,7 +991,7 @@ inline void brx_anari_pal_surface_instance::init(brx_anari_pal_device *device, b
         assert(NULL == this->m_vertex_varying_buffer);
         this->m_vertex_varying_buffer = device->create_deforming_surface_intermediate_vertex_varying_buffer(vertex_count);
 
-        assert(NULL == this->m_deforming_descriptor_set_per_surface_update);
+        assert(NULL == this->m_deforming_surface_update_descriptor_set);
         assert(NULL != surface->get_vertex_position_buffer());
         assert(NULL != surface->get_vertex_varying_buffer());
         assert(NULL != surface->get_vertex_blending_buffer());
@@ -1009,21 +1009,21 @@ inline void brx_anari_pal_surface_instance::init(brx_anari_pal_device *device, b
             morph_targets_vertex_varying_buffers[morph_target_name_index] = (NULL != morph_target_vertex_varying_buffer) ? morph_target_vertex_varying_buffer->get_read_only_storage_buffer() : NULL;
         }
 
-        this->m_deforming_descriptor_set_per_surface_update = device->create_deforming_per_surface_update_descriptor_set(surface->get_vertex_position_buffer()->get_read_only_storage_buffer(), surface->get_vertex_varying_buffer()->get_read_only_storage_buffer(), surface->get_vertex_blending_buffer()->get_read_only_storage_buffer(), morph_targets_vertex_position_buffers, morph_targets_vertex_varying_buffers, this->m_vertex_position_buffer->get_storage_buffer(), this->m_vertex_varying_buffer->get_storage_buffer());
+        this->m_deforming_surface_update_descriptor_set = device->create_deforming_surface_update_descriptor_set(surface->get_vertex_position_buffer()->get_read_only_storage_buffer(), surface->get_vertex_varying_buffer()->get_read_only_storage_buffer(), surface->get_vertex_blending_buffer()->get_read_only_storage_buffer(), morph_targets_vertex_position_buffers, morph_targets_vertex_varying_buffers, this->m_vertex_position_buffer->get_storage_buffer(), this->m_vertex_varying_buffer->get_storage_buffer());
 
-        assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+        assert(NULL == this->m_surface_update_descriptor_set);
         assert(NULL != this->m_vertex_position_buffer);
         assert(NULL != this->m_vertex_varying_buffer);
         assert(NULL != surface->get_index_buffer());
         assert(NULL != surface->get_auxiliary_buffer());
-        this->m_forward_shading_descriptor_set_per_surface_update = device->create_forward_shading_per_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), surface->get_index_buffer()->get_read_only_storage_buffer(), surface->get_auxiliary_buffer()->get_read_only_storage_buffer(), (NULL != surface->get_emissive_image()) ? surface->get_emissive_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_normal_image()) ? surface->get_normal_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_base_color_image()) ? surface->get_base_color_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_metallic_roughness_image()) ? surface->get_metallic_roughness_image()->get_image()->get_sampled_image() : NULL);
+        this->m_surface_update_descriptor_set = device->create_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), surface->get_index_buffer()->get_read_only_storage_buffer(), surface->get_auxiliary_buffer()->get_read_only_storage_buffer(), (NULL != surface->get_emissive_image()) ? surface->get_emissive_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_normal_image()) ? surface->get_normal_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_base_color_image()) ? surface->get_base_color_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_metallic_roughness_image()) ? surface->get_metallic_roughness_image()->get_image()->get_sampled_image() : NULL);
     }
     else
     {
         assert(NULL == this->m_vertex_position_buffer);
         assert(NULL == this->m_vertex_varying_buffer);
-        assert(NULL == this->m_deforming_descriptor_set_per_surface_update);
-        assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+        assert(NULL == this->m_deforming_surface_update_descriptor_set);
+        assert(NULL == this->m_surface_update_descriptor_set);
     }
 }
 
@@ -1031,13 +1031,13 @@ inline void brx_anari_pal_surface_instance::uninit(brx_anari_pal_device *device,
 {
     if (surface->get_deforming())
     {
-        assert(NULL != this->m_deforming_descriptor_set_per_surface_update);
-        device->helper_destroy_descriptor_set(this->m_deforming_descriptor_set_per_surface_update);
-        this->m_deforming_descriptor_set_per_surface_update = NULL;
+        assert(NULL != this->m_deforming_surface_update_descriptor_set);
+        device->helper_destroy_descriptor_set(this->m_deforming_surface_update_descriptor_set);
+        this->m_deforming_surface_update_descriptor_set = NULL;
 
-        assert(NULL != this->m_forward_shading_descriptor_set_per_surface_update);
-        device->helper_destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_update);
-        this->m_forward_shading_descriptor_set_per_surface_update = NULL;
+        assert(NULL != this->m_surface_update_descriptor_set);
+        device->helper_destroy_descriptor_set(this->m_surface_update_descriptor_set);
+        this->m_surface_update_descriptor_set = NULL;
 
         assert(NULL != this->m_vertex_position_buffer);
         device->helper_destroy_intermediate_buffer(this->m_vertex_position_buffer);
@@ -1051,8 +1051,8 @@ inline void brx_anari_pal_surface_instance::uninit(brx_anari_pal_device *device,
     {
         assert(NULL == this->m_vertex_position_buffer);
         assert(NULL == this->m_vertex_varying_buffer);
-        assert(NULL == this->m_deforming_descriptor_set_per_surface_update);
-        assert(NULL == this->m_forward_shading_descriptor_set_per_surface_update);
+        assert(NULL == this->m_deforming_surface_update_descriptor_set);
+        assert(NULL == this->m_surface_update_descriptor_set);
     }
 }
 
@@ -1066,26 +1066,26 @@ brx_pal_storage_intermediate_buffer const *brx_anari_pal_surface_instance::get_v
     return this->m_vertex_varying_buffer;
 }
 
-brx_pal_descriptor_set const *brx_anari_pal_surface_instance::get_deforming_per_surface_update_descriptor_set() const
+brx_pal_descriptor_set const *brx_anari_pal_surface_instance::get_deforming_surface_update_descriptor_set() const
 {
     assert(this->get_deforming());
-    return this->m_deforming_descriptor_set_per_surface_update;
+    return this->m_deforming_surface_update_descriptor_set;
 }
 
-brx_pal_descriptor_set const *brx_anari_pal_surface_instance::get_forward_shading_per_surface_update_descriptor_set() const
+brx_pal_descriptor_set const *brx_anari_pal_surface_instance::get_surface_update_descriptor_set() const
 {
     assert(this->get_deforming());
-    return this->m_forward_shading_descriptor_set_per_surface_update;
+    return this->m_surface_update_descriptor_set;
 }
 
 #ifndef NDEBUG
 bool brx_anari_pal_surface_instance::get_deforming() const
 {
-    if ((NULL != this->m_vertex_position_buffer) && (NULL != this->m_vertex_varying_buffer) && (NULL != this->m_deforming_descriptor_set_per_surface_update) && (NULL != this->m_forward_shading_descriptor_set_per_surface_update))
+    if ((NULL != this->m_vertex_position_buffer) && (NULL != this->m_vertex_varying_buffer) && (NULL != this->m_deforming_surface_update_descriptor_set) && (NULL != this->m_surface_update_descriptor_set))
     {
         return true;
     }
-    else if ((NULL == this->m_vertex_position_buffer) && (NULL == this->m_vertex_varying_buffer) && (NULL == this->m_deforming_descriptor_set_per_surface_update) && (NULL == this->m_forward_shading_descriptor_set_per_surface_update))
+    else if ((NULL == this->m_vertex_position_buffer) && (NULL == this->m_vertex_varying_buffer) && (NULL == this->m_deforming_surface_update_descriptor_set) && (NULL == this->m_surface_update_descriptor_set))
     {
         return false;
     }
@@ -1097,7 +1097,7 @@ bool brx_anari_pal_surface_instance::get_deforming() const
 }
 #endif
 
-inline brx_anari_pal_surface_group_instance::brx_anari_pal_surface_group_instance() : m_surface_group(NULL), m_surfaces{}, m_deforming_per_surface_group_update_set_uniform_buffer(NULL), m_deforming_descriptor_set_per_surface_group_update(NULL), m_forward_shading_per_surface_group_update_set_uniform_buffer(NULL), m_forward_shading_descriptor_set_per_surface_group_update(NULL)
+inline brx_anari_pal_surface_group_instance::brx_anari_pal_surface_group_instance() : m_surface_group(NULL), m_surfaces{}, m_deforming_surface_group_update_set_uniform_buffer(NULL), m_deforming_surface_group_update_descriptor_set(NULL), m_surface_group_update_set_uniform_buffer(NULL), m_surface_group_update_descriptor_set(NULL)
 {
 }
 
@@ -1105,10 +1105,10 @@ inline brx_anari_pal_surface_group_instance::~brx_anari_pal_surface_group_instan
 {
     assert(NULL == this->m_surface_group);
     assert(this->m_surfaces.empty());
-    assert(NULL == this->m_deforming_per_surface_group_update_set_uniform_buffer);
-    assert(NULL == this->m_deforming_descriptor_set_per_surface_group_update);
-    assert(NULL == this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
-    assert(NULL == this->m_forward_shading_descriptor_set_per_surface_group_update);
+    assert(NULL == this->m_deforming_surface_group_update_set_uniform_buffer);
+    assert(NULL == this->m_deforming_surface_group_update_descriptor_set);
+    assert(NULL == this->m_surface_group_update_set_uniform_buffer);
+    assert(NULL == this->m_surface_group_update_descriptor_set);
 }
 
 inline void brx_anari_pal_surface_group_instance::init(brx_anari_pal_device *device, brx_anari_pal_surface_group *surface_group)
@@ -1133,23 +1133,23 @@ inline void brx_anari_pal_surface_group_instance::init(brx_anari_pal_device *dev
 
     if (deforming)
     {
-        assert(NULL == this->m_deforming_per_surface_group_update_set_uniform_buffer);
-        this->m_deforming_per_surface_group_update_set_uniform_buffer = device->create_deforming_per_surface_group_update_set_uniform_buffer();
+        assert(NULL == this->m_deforming_surface_group_update_set_uniform_buffer);
+        this->m_deforming_surface_group_update_set_uniform_buffer = device->create_deforming_surface_group_update_set_uniform_buffer();
 
-        assert(NULL == this->m_deforming_descriptor_set_per_surface_group_update);
-        this->m_deforming_descriptor_set_per_surface_group_update = device->create_deforming_per_surface_group_update_descriptor_set(this->m_deforming_per_surface_group_update_set_uniform_buffer);
+        assert(NULL == this->m_deforming_surface_group_update_descriptor_set);
+        this->m_deforming_surface_group_update_descriptor_set = device->create_deforming_surface_group_update_descriptor_set(this->m_deforming_surface_group_update_set_uniform_buffer);
     }
     else
     {
-        assert(NULL == this->m_deforming_per_surface_group_update_set_uniform_buffer);
-        assert(NULL == this->m_deforming_descriptor_set_per_surface_group_update);
+        assert(NULL == this->m_deforming_surface_group_update_set_uniform_buffer);
+        assert(NULL == this->m_deforming_surface_group_update_descriptor_set);
     }
 
-    assert(NULL == this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
-    this->m_forward_shading_per_surface_group_update_set_uniform_buffer = device->create_forward_shading_per_surface_group_update_set_uniform_buffer();
+    assert(NULL == this->m_surface_group_update_set_uniform_buffer);
+    this->m_surface_group_update_set_uniform_buffer = device->create_surface_group_update_set_uniform_buffer();
 
-    assert(NULL == this->m_forward_shading_descriptor_set_per_surface_group_update);
-    this->m_forward_shading_descriptor_set_per_surface_group_update = device->create_forward_shading_per_surface_group_update_descriptor_set(this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
+    assert(NULL == this->m_surface_group_update_descriptor_set);
+    this->m_surface_group_update_descriptor_set = device->create_surface_group_update_descriptor_set(this->m_surface_group_update_set_uniform_buffer);
 }
 
 inline void brx_anari_pal_surface_group_instance::uninit(brx_anari_pal_device *device)
@@ -1170,27 +1170,27 @@ inline void brx_anari_pal_surface_group_instance::uninit(brx_anari_pal_device *d
 
     if (deforming)
     {
-        assert(NULL != this->m_deforming_descriptor_set_per_surface_group_update);
-        device->helper_destroy_descriptor_set(this->m_deforming_descriptor_set_per_surface_group_update);
-        this->m_deforming_descriptor_set_per_surface_group_update = NULL;
+        assert(NULL != this->m_deforming_surface_group_update_descriptor_set);
+        device->helper_destroy_descriptor_set(this->m_deforming_surface_group_update_descriptor_set);
+        this->m_deforming_surface_group_update_descriptor_set = NULL;
 
-        assert(NULL != this->m_deforming_per_surface_group_update_set_uniform_buffer);
-        device->helper_destroy_upload_buffer(this->m_deforming_per_surface_group_update_set_uniform_buffer);
-        this->m_deforming_per_surface_group_update_set_uniform_buffer = NULL;
+        assert(NULL != this->m_deforming_surface_group_update_set_uniform_buffer);
+        device->helper_destroy_upload_buffer(this->m_deforming_surface_group_update_set_uniform_buffer);
+        this->m_deforming_surface_group_update_set_uniform_buffer = NULL;
     }
     else
     {
-        assert(NULL == this->m_deforming_descriptor_set_per_surface_group_update);
-        assert(NULL == this->m_deforming_per_surface_group_update_set_uniform_buffer);
+        assert(NULL == this->m_deforming_surface_group_update_descriptor_set);
+        assert(NULL == this->m_deforming_surface_group_update_set_uniform_buffer);
     }
 
-    assert(NULL != this->m_forward_shading_descriptor_set_per_surface_group_update);
-    device->helper_destroy_descriptor_set(this->m_forward_shading_descriptor_set_per_surface_group_update);
-    this->m_forward_shading_descriptor_set_per_surface_group_update = NULL;
+    assert(NULL != this->m_surface_group_update_descriptor_set);
+    device->helper_destroy_descriptor_set(this->m_surface_group_update_descriptor_set);
+    this->m_surface_group_update_descriptor_set = NULL;
 
-    assert(NULL != this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
-    device->helper_destroy_upload_buffer(this->m_forward_shading_per_surface_group_update_set_uniform_buffer);
-    this->m_forward_shading_per_surface_group_update_set_uniform_buffer = NULL;
+    assert(NULL != this->m_surface_group_update_set_uniform_buffer);
+    device->helper_destroy_upload_buffer(this->m_surface_group_update_set_uniform_buffer);
+    this->m_surface_group_update_set_uniform_buffer = NULL;
 
     assert(NULL != this->m_surface_group);
     device->release_surface_group(this->m_surface_group);
@@ -1202,24 +1202,24 @@ brx_anari_pal_surface_group const *brx_anari_pal_surface_group_instance::get_sur
     return this->m_surface_group;
 }
 
-brx_pal_uniform_upload_buffer const *brx_anari_pal_surface_group_instance::get_deforming_per_surface_group_update_set_uniform_buffer() const
+brx_pal_uniform_upload_buffer const *brx_anari_pal_surface_group_instance::get_deforming_surface_group_update_set_uniform_buffer() const
 {
-    return this->m_deforming_per_surface_group_update_set_uniform_buffer;
+    return this->m_deforming_surface_group_update_set_uniform_buffer;
 }
 
-brx_pal_descriptor_set const *brx_anari_pal_surface_group_instance::get_deforming_per_surface_group_update_descriptor_set() const
+brx_pal_descriptor_set const *brx_anari_pal_surface_group_instance::get_deforming_surface_group_update_descriptor_set() const
 {
-    return this->m_deforming_descriptor_set_per_surface_group_update;
+    return this->m_deforming_surface_group_update_descriptor_set;
 }
 
-brx_pal_uniform_upload_buffer const *brx_anari_pal_surface_group_instance::get_forward_shading_per_surface_group_update_set_uniform_buffer() const
+brx_pal_uniform_upload_buffer const *brx_anari_pal_surface_group_instance::get_surface_group_update_set_uniform_buffer() const
 {
-    return this->m_forward_shading_per_surface_group_update_set_uniform_buffer;
+    return this->m_surface_group_update_set_uniform_buffer;
 }
 
-brx_pal_descriptor_set const *brx_anari_pal_surface_group_instance::get_forward_shading_per_surface_group_update_descriptor_set() const
+brx_pal_descriptor_set const *brx_anari_pal_surface_group_instance::get_surface_group_update_descriptor_set() const
 {
-    return this->m_forward_shading_descriptor_set_per_surface_group_update;
+    return this->m_surface_group_update_descriptor_set;
 }
 
 inline uint32_t brx_anari_pal_surface_group_instance::get_surface_count() const

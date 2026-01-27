@@ -120,6 +120,8 @@ all : \
 	$(DXIL_DIR)/_internal_full_screen_transfer_vertex.inl \
 	$(DXIL_DIR)/_internal_full_screen_transfer_fragment.inl \
 	$(DXIL_DIR)/_internal_deforming_compute.inl \
+	$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.inl \
+	$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.inl \
 	$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl \
 	$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl \
 	$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl \
@@ -154,6 +156,16 @@ $(DXIL_DIR)/_internal_deforming_compute.inl $(DXIL_DIR)/_internal_deforming_comp
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
 	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -MD -MF "$(DXIL_DIR)/_internal_deforming_compute.d" -Fo "$(DXIL_DIR)/_internal_deforming_compute.inl" "$(SHADERS_DIR)/deforming_compute.bsl"
 	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T cs_6_0 -Fh "$(DXIL_DIR)/_internal_deforming_compute.inl" -Vn "deforming_compute_shader_module_code" "$(SHADERS_DIR)/deforming_compute.bsl"
+
+$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.inl $(DXIL_DIR)/_internal_area_lighting_emissive_vertex.d : $(SHADERS_DIR)/area_lighting_emissive_vertex.bsl
+	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -MD -MF "$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.d" -Fo "$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.inl" "$(SHADERS_DIR)/area_lighting_emissive_vertex.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T vs_6_0 -Fh "$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.inl" -Vn "area_lighting_emissive_vertex_shader_module_code" "$(SHADERS_DIR)/area_lighting_emissive_vertex.bsl"
+
+$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.inl $(DXIL_DIR)/_internal_area_lighting_emissive_fragment.d : $(SHADERS_DIR)/area_lighting_emissive_fragment.bsl
+	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -MD -MF "$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.d" -Fo "$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.inl" "$(SHADERS_DIR)/area_lighting_emissive_fragment.bsl"
+	$(HIDE) "$(HLSL_COMPILER_PATH)" $(HLSL_COMPILER_DEBUG_FLAGS) -T ps_6_0 -Fh "$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.inl" -Vn "area_lighting_emissive_fragment_shader_module_code" "$(SHADERS_DIR)/area_lighting_emissive_fragment.bsl"
 
 $(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl $(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d : $(SHADERS_DIR)/environment_lighting_sh_projection_environment_map_clear_compute.bsl
 	$(HIDE) $(call host-mkdir,$(DXIL_DIR))
@@ -249,6 +261,8 @@ $(DXIL_DIR)/_internal_post_processing_fragment.inl $(DXIL_DIR)/_internal_post_pr
 	$(DXIL_DIR)/_internal_full_screen_transfer_vertex.d \
 	$(DXIL_DIR)/_internal_full_screen_transfer_fragment.d \
 	$(DXIL_DIR)/_internal_deforming_compute.d \
+	$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.d \
+	$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.d \
 	$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d \
 	$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.d \
 	$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.d \
@@ -272,6 +286,8 @@ clean:
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_full_screen_transfer_vertex.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_full_screen_transfer_fragment.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_deforming_compute.inl)
+	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.inl)
+	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl)
@@ -293,6 +309,8 @@ clean:
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_full_screen_transfer_vertex.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_full_screen_transfer_fragment.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_deforming_compute.d)
+	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_area_lighting_emissive_vertex.d)
+	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_area_lighting_emissive_fragment.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.d)
 	$(HIDE) $(call host-rm,$(DXIL_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.d)

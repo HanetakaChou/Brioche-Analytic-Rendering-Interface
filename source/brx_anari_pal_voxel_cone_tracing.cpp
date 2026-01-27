@@ -22,75 +22,92 @@
 #include "../../Voxel-Cone-Tracing/include/brx_voxel_cone_tracing_clear.h"
 #include "../../Voxel-Cone-Tracing/include/brx_voxel_cone_tracing_voxelization.h"
 #include "../../Voxel-Cone-Tracing/include/brx_voxel_cone_tracing_pack.h"
-#include "../shaders/forward_shading_resource_binding.bsli"
-#include "../shaders/post_processing_resource_binding.bsli"
+#include "../shaders/surface_resource_binding.bsli"
+#include "../shaders/none_update_resource_binding.bsli"
+
+void brx_anari_pal_device::voxel_cone_tracing_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination)
+{
+    DirectX::XMFLOAT3 voxel_cone_tracing_clipmap_anchor;
+    DirectX::XMFLOAT3 voxel_cone_tracing_clipmap_center;
+    DirectX::XMFLOAT4X4 voxel_cone_tracing_viewport_depth_direction_view_matrices[BRX_VCT_VIEWPORT_DEPTH_DIRECTION_COUNT];
+    DirectX::XMFLOAT4X4 voxel_cone_tracing_clipmap_stack_level_projection_matrices[BRX_VCT_CLIPMAP_STACK_LEVEL_COUNT];
+    {
+        DirectX::XMFLOAT3 const camera_position(this->m_camera_position.m_x, this->m_camera_position.m_y, this->m_camera_position.m_z);
+        DirectX::XMFLOAT3 const camera_direction(this->m_camera_direction.m_x, this->m_camera_direction.m_y, this->m_camera_direction.m_z);
+
+        voxel_cone_tracing_clipmap_anchor = this->voxel_cone_tracing_get_clipmap_anchor(camera_position, camera_direction);
+
+        voxel_cone_tracing_clipmap_center = this->voxel_cone_tracing_get_clipmap_center(voxel_cone_tracing_clipmap_anchor);
+
+        for (uint32_t viewport_depth_direction_index = 0U; viewport_depth_direction_index < static_cast<uint32_t>(BRX_VCT_VIEWPORT_DEPTH_DIRECTION_COUNT); ++viewport_depth_direction_index)
+        {
+            voxel_cone_tracing_viewport_depth_direction_view_matrices[viewport_depth_direction_index] = this->voxel_cone_tracing_get_viewport_depth_direction_view_matrix(voxel_cone_tracing_clipmap_center, viewport_depth_direction_index);
+        }
+
+        for (uint32_t stack_level = 0U; stack_level < static_cast<uint32_t>(BRX_VCT_CLIPMAP_STACK_LEVEL_COUNT); ++stack_level)
+        {
+            voxel_cone_tracing_clipmap_stack_level_projection_matrices[stack_level] = this->voxel_cone_tracing_get_clipmap_stack_level_projection_matrix(stack_level);
+        }
+    }
+
+    for (uint32_t viewport_depth_direction_index = 0U; viewport_depth_direction_index < static_cast<uint32_t>(BRX_VCT_VIEWPORT_DEPTH_DIRECTION_COUNT); ++viewport_depth_direction_index)
+    {
+        none_update_set_uniform_buffer_destination->g_viewport_depth_direction_view_matrices[viewport_depth_direction_index] = voxel_cone_tracing_viewport_depth_direction_view_matrices[viewport_depth_direction_index];
+    }
+    for (uint32_t stack_level = 0U; stack_level < static_cast<uint32_t>(BRX_VCT_CLIPMAP_STACK_LEVEL_COUNT); ++stack_level)
+    {
+        none_update_set_uniform_buffer_destination->g_clipmap_stack_level_projection_matrices[stack_level] = voxel_cone_tracing_clipmap_stack_level_projection_matrices[stack_level];
+    }
+    none_update_set_uniform_buffer_destination->g_clipmap_anchor = voxel_cone_tracing_clipmap_anchor;
+    none_update_set_uniform_buffer_destination->g_clipmap_center = voxel_cone_tracing_clipmap_center;
+    none_update_set_uniform_buffer_destination->g_renderer_gi_quality = this->m_renderer_gi_quality;
+}
 
 void brx_anari_pal_device::voxel_cone_tracing_write_quality_dependent_place_holder_none_update_descriptor()
 {
     assert(NULL != this->m_place_holder_asset_image);
     assert(NULL != this->m_place_holder_storage_image);
 
-    // Write Forward Shading None Update Descriptor
+    // Write None Update Descriptor
 
     {
         brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-        this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
     }
 
     {
         brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-        this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
     }
 
     {
         brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-        this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
-    }
-
-    {
-        this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
-    }
-
-    // Write Post Processing None Update Descriptor
-
-    {
-        brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
     }
 
     {
         brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
-    }
-
-    {
-        brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
-    }
-
-    {
-        brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
     }
 
     {
         brx_pal_sampled_image const *const sampled_images[] = {this->m_place_holder_asset_image->get_sampled_image()};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 13U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 20U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
     }
 
     {
         brx_pal_sampled_image const *const sampled_images[] = {this->m_place_holder_asset_image->get_sampled_image()};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 14U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 21U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
     }
 
     {
         brx_pal_sampled_image const *const sampled_images[] = {this->m_place_holder_asset_image->get_sampled_image()};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 15U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 22U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
     }
 
     {
         brx_pal_sampled_image const *const sampled_images[] = {this->m_place_holder_asset_image->get_sampled_image()};
-        this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 16U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+        this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 23U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
     }
 }
 
@@ -158,7 +175,7 @@ void brx_anari_pal_device::voxel_cone_tracing_destroy_screen_size_dependent_none
 
 void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
 {
-    assert(NULL != this->m_post_processing_pipeline_layout);
+    assert(NULL != this->m_none_update_pipeline_layout);
 
     {
         assert(NULL == this->m_voxel_cone_tracing_zero_pipeline);
@@ -167,13 +184,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_zero_compute.inl"
-            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
+            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_zero_compute.inl"
-            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
+            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
         }
 #else
 #error Unknown Platform
@@ -184,13 +201,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         case BRX_PAL_BACKEND_NAME_D3D12:
         {
 #include "../shaders/dxil/voxel_cone_tracing_zero_compute.inl"
-            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
+            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_zero_compute.inl"
-            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
+            this->m_voxel_cone_tracing_zero_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_zero_compute_shader_module_code), voxel_cone_tracing_zero_compute_shader_module_code);
         }
         break;
         default:
@@ -208,13 +225,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_clear_compute.inl"
-            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
+            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_clear_compute.inl"
-            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
+            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
         }
 #else
 #error Unknown Platform
@@ -225,13 +242,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         case BRX_PAL_BACKEND_NAME_D3D12:
         {
 #include "../shaders/dxil/voxel_cone_tracing_clear_compute.inl"
-            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
+            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_clear_compute.inl"
-            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
+            this->m_voxel_cone_tracing_clear_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_clear_compute_shader_module_code), voxel_cone_tracing_clear_compute_shader_module_code);
         }
         break;
         default:
@@ -249,13 +266,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_pack_compute.inl"
-            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
+            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_pack_compute.inl"
-            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
+            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
         }
 #else
 #error Unknown Platform
@@ -266,13 +283,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         case BRX_PAL_BACKEND_NAME_D3D12:
         {
 #include "../shaders/dxil/voxel_cone_tracing_pack_compute.inl"
-            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
+            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_pack_compute.inl"
-            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
+            this->m_voxel_cone_tracing_pack_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_pack_compute_shader_module_code), voxel_cone_tracing_pack_compute_shader_module_code);
         }
         break;
         default:
@@ -290,13 +307,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_low_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_low_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
         }
 #else
 #error Unknown Platform
@@ -307,13 +324,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         case BRX_PAL_BACKEND_NAME_D3D12:
         {
 #include "../shaders/dxil/voxel_cone_tracing_cone_tracing_low_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_low_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_low_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_low_compute_shader_module_code), voxel_cone_tracing_cone_tracing_low_compute_shader_module_code);
         }
         break;
         default:
@@ -331,13 +348,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_medium_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_medium_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
         }
 #else
 #error Unknown Platform
@@ -348,13 +365,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         case BRX_PAL_BACKEND_NAME_D3D12:
         {
 #include "../shaders/dxil/voxel_cone_tracing_cone_tracing_medium_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_medium_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_medium_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code), voxel_cone_tracing_cone_tracing_medium_compute_shader_module_code);
         }
         break;
         default:
@@ -372,13 +389,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_high_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_high_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
         }
 #else
 #error Unknown Platform
@@ -389,13 +406,13 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         case BRX_PAL_BACKEND_NAME_D3D12:
         {
 #include "../shaders/dxil/voxel_cone_tracing_cone_tracing_high_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_cone_tracing_high_compute.inl"
-            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_post_processing_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
+            this->m_voxel_cone_tracing_cone_tracing_high_pipeline = this->m_device->create_compute_pipeline(this->m_none_update_pipeline_layout, sizeof(voxel_cone_tracing_cone_tracing_high_compute_shader_module_code), voxel_cone_tracing_cone_tracing_high_compute_shader_module_code);
         }
         break;
         default:
@@ -408,7 +425,7 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
 #endif
     }
 
-    assert(NULL != this->m_forward_shading_pipeline_layout);
+    assert(NULL != this->m_surface_update_pipeline_layout);
 
     {
         assert(NULL == this->m_voxel_cone_tracing_voxelization_render_pass);
@@ -421,14 +438,14 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         {
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_forward_shading_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_forward_shading_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
 #else
 #error Unknown Platform
@@ -440,14 +457,14 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         {
 #include "../shaders/dxil/voxel_cone_tracing_voxelization_vertex.inl"
 #include "../shaders/dxil/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_forward_shading_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_forward_shading_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
         break;
         default:
@@ -541,16 +558,16 @@ void brx_anari_pal_device::renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY
                 assert(NULL != this->m_place_holder_asset_image);
                 assert(NULL != this->m_place_holder_storage_image);
 
-                // Write Post Processing None Update Descriptor
+                // Write None Update Descriptor
 
                 {
                     brx_pal_storage_image const *const storage_images[] = {this->m_place_holder_storage_image};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 5U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_place_holder_asset_image->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 24U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
             }
             else
@@ -562,81 +579,60 @@ void brx_anari_pal_device::renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY
 
                 this->voxel_cone_tracing_create_quality_dependent_none_update_binding_resource();
 
-                // Write Forward Shading None Update Descriptor
+                // Write None Update Descriptor
 
                 {
                     brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
                     brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
                     brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16};
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
-                }
-
-                {
-                    this->m_device->write_descriptor_set(this->m_forward_shading_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLER, 0U, 1U, NULL, NULL, NULL, NULL, NULL, NULL, &this->m_shared_none_update_set_linear_wrap_sampler, NULL);
-                }
-
-                // Write Post Processing None Update Descriptor
-
-                {
-                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_mask};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 0U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
-                }
-
-                {
-                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 1U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
-                }
-
-                {
-                    brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 2U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
                     brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16b16a16};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 3U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_mask->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 13U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 20U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 14U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 21U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_b16a16->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 15U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 22U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_clipmap_illumination_opacity_r16g16b16a16->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 16U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 23U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
 
                 this->voxel_cone_tracing_create_screen_size_dependent_none_update_binding_resource();
 
-                // Write Post Processing None Update Descriptor
+                // Write None Update Descriptor
 
                 {
                     brx_pal_storage_image const *const storage_images[] = {this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 4U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 5U, BRX_PAL_DESCRIPTOR_TYPE_STORAGE_IMAGE, 0U, sizeof(storage_images) / sizeof(storage_images[0]), NULL, NULL, NULL, NULL, NULL, storage_images, NULL, NULL);
                 }
 
                 {
                     brx_pal_sampled_image const *const sampled_images[] = {this->m_voxel_cone_tracing_indirect_radiance_and_ambient_occlusion->get_sampled_image()};
-                    this->m_device->write_descriptor_set(this->m_post_processing_descriptor_set_none_update, 17U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
+                    this->m_device->write_descriptor_set(this->m_none_update_descriptor_set, 24U, BRX_PAL_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 0U, sizeof(sampled_images) / sizeof(sampled_images[0]), NULL, NULL, NULL, NULL, sampled_images, NULL, NULL, NULL);
                 }
             }
         }
@@ -695,11 +691,11 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
             graphics_command_buffer->bind_compute_pipeline(this->m_voxel_cone_tracing_zero_pipeline);
 
             {
-                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
+                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_none_update_descriptor_set};
 
-                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
-                graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                graphics_command_buffer->bind_compute_descriptor_sets(this->m_none_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
 
             {
@@ -747,11 +743,11 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
             graphics_command_buffer->bind_compute_pipeline(this->m_voxel_cone_tracing_clear_pipeline);
 
             {
-                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
+                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_none_update_descriptor_set};
 
-                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
-                graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                graphics_command_buffer->bind_compute_descriptor_sets(this->m_none_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
 
             {
@@ -804,13 +800,13 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
 
                         {
                             brx_pal_descriptor_set const *const descriptor_sets[] = {
-                                this->m_forward_shading_descriptor_set_none_update,
-                                surface_group_instance->get_forward_shading_per_surface_group_update_descriptor_set(),
-                                surface->get_deforming() ? surface_instance->get_forward_shading_per_surface_update_descriptor_set() : surface->get_forward_shading_per_surface_update_descriptor_set()};
+                                this->m_none_update_descriptor_set,
+                                surface_group_instance->get_surface_group_update_descriptor_set(),
+                                surface->get_deforming() ? surface_instance->get_surface_update_descriptor_set() : surface->get_surface_update_descriptor_set()};
 
-                            uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_none_update_set_uniform_buffer_binding>(frame_throttling_index), this->helper_compute_uniform_buffer_dynamic_offset<forward_shading_per_surface_group_update_set_uniform_buffer_binding>(frame_throttling_index)};
+                            uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(frame_throttling_index), this->helper_compute_uniform_buffer_dynamic_offset<surface_group_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
-                            graphics_command_buffer->bind_graphics_descriptor_sets(this->m_forward_shading_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                            graphics_command_buffer->bind_graphics_descriptor_sets(this->m_surface_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
                         }
 
                         graphics_command_buffer->draw(surface->get_index_count(), static_cast<uint32_t>(BRX_VCT_CLIPMAP_STACK_LEVEL_COUNT), 0U, 0U);
@@ -835,11 +831,11 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
             graphics_command_buffer->bind_compute_pipeline(this->m_voxel_cone_tracing_pack_pipeline);
 
             {
-                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
+                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_none_update_descriptor_set};
 
-                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
-                graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                graphics_command_buffer->bind_compute_descriptor_sets(this->m_none_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
 
             {
@@ -891,11 +887,11 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
             }
 
             {
-                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_post_processing_descriptor_set_none_update};
+                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_none_update_descriptor_set};
 
-                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<post_processing_none_update_set_uniform_buffer_binding>(frame_throttling_index)};
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(frame_throttling_index)};
 
-                graphics_command_buffer->bind_compute_descriptor_sets(this->m_post_processing_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+                graphics_command_buffer->bind_compute_descriptor_sets(this->m_none_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
             }
 
             {

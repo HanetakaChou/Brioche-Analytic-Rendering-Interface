@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "post_processing_resource_binding.bsli"
+#include "none_update_resource_binding.bsli"
 
 brx_root_signature(post_processing_root_signature_macro, post_processing_root_signature_name)
 brx_vertex_shader_parameter_begin(main)

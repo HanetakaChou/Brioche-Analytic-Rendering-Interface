@@ -15,19 +15,49 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "forward_shading_resource_binding.bsli"
+#include "surface_resource_binding.bsli"
 
 #include "../../Spherical-Harmonic/include/brx_spherical_harmonic.h"
 #define BRX_VCT_ENABLE_ILLUMINATION 1
-#define BRX_VCT_VOXELIZATION_MAXIMUM_ENVIRONMENT_LIGHTING_ILLUMINATION_FLOAT_COUNT BRX_SH_COEFFICIENT_COUNT
-#define BRX_VCT_VOXELIZATION_MAXIMUM_DIRECT_LIGHTING_COUNT 1
 #include "../../Voxel-Cone-Tracing/shaders/brx_voxel_cone_tracing_voxelization_fragment.bsli"
 
 #include "../../Brioche-Shader-Language/shaders/brx_shader_language.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_brdf.bsli"
-#include "../../Spherical-Harmonic/include/brx_spherical_harmonic_projection_transfer_function.h"
+#include "../../Hemispherical-Directional-Reflectance/shaders/brx_hemispherical_directional_reflectance.bsli"
+#include "../../Linearly-Transformed-Cosine/shaders/brx_linearly_transformed_cosine_attenuation.bsli"
+#include "../../Linearly-Transformed-Cosine/shaders/brx_linearly_transformed_cosine_radiance.bsli"
 #include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_diffuse_radiance.bsli"
 #include "../../Spherical-Harmonic/shaders/brx_spherical_harmonic_specular_radiance.bsli"
+
+brx_int2 brx_hdr_application_bridge_get_specular_fresnel_factor_lut_dimension()
+{
+    return brx_texture_2d_get_dimension(t_lut_specular_hdr_fresnel_factor, 0);
+}
+
+brx_float2 brx_hdr_application_bridge_get_specular_fresnel_factor_lut(in brx_float2 in_lut_uv)
+{
+    return brx_sample_level_2d(t_lut_specular_hdr_fresnel_factor, s_clamp_sampler, in_lut_uv, 0.0).xy;
+}
+
+brx_int2 brx_ltc_application_bridge_get_specular_matrix_lut_dimension()
+{
+    return brx_texture_2d_get_dimension(t_lut_specular_ltc_matrix, 0);
+}
+
+brx_float4 brx_ltc_application_bridge_get_specular_matrix_lut(in brx_float2 in_lut_uv)
+{
+    return brx_sample_level_2d(t_lut_specular_ltc_matrix, s_clamp_sampler, in_lut_uv, 0.0);
+}
+
+brx_int3 brx_sh_application_bridge_get_specular_transfer_function_sh_coefficient_lut_dimension()
+{
+    return brx_texture_2d_array_get_dimension(t_lut_specular_transfer_function_sh_coefficient, 0);
+}
+
+brx_float brx_sh_application_bridge_get_specular_transfer_function_sh_coefficient_lut(in brx_float2 in_lut_uv, brx_int in_sh_coefficient_index)
+{
+    return brx_sample_level_2d_array(t_lut_specular_transfer_function_sh_coefficient, s_clamp_sampler, brx_float3(in_lut_uv, brx_float(in_sh_coefficient_index)), 0.0).x;
+}
 
 brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_float4 in_tangent, in brx_float2 in_texcoord, out brx_float3 out_surface_shading_normal_world_space, out brx_float3 out_surface_diffuse_color, out brx_float3 out_surface_specular_color, out brx_float out_surface_roughness, out brx_float out_surface_opacity, out brx_float3 out_surface_emissive)
 {
@@ -61,7 +91,7 @@ brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_
         brx_float3 bitangent_world_space = brx_cross(geometry_normal_world_space, tangent_world_space) * ((in_tangent.w >= 0.0) ? 1.0 : -1.0);
 
         // ["5.20.3. material.normalTextureInfo.scale" of "glTF 2.0 Specification"](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_material_normaltextureinfo_scale)
-        brx_float3 shading_normal_tangent_space = brx_normalize((brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_NORMAL_TEXTURE_INDEX], s_sampler, texcoord).xyz * 2.0 - brx_float3(1.0, 1.0, 1.0)) * brx_float3(normal_scale, normal_scale, 1.0));
+        brx_float3 shading_normal_tangent_space = brx_normalize((brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_NORMAL_TEXTURE_INDEX], s_wrap_sampler, texcoord).xyz * 2.0 - brx_float3(1.0, 1.0, 1.0)) * brx_float3(normal_scale, normal_scale, 1.0));
 
         out_surface_shading_normal_world_space = brx_normalize(tangent_world_space * shading_normal_tangent_space.x + bitangent_world_space * shading_normal_tangent_space.y + geometry_normal_world_space * shading_normal_tangent_space.z);
     }
@@ -73,7 +103,7 @@ brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_
     brx_float4 base_color_and_opacity;
     brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_BASE_COLOR))
     {
-        base_color_and_opacity = base_color_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_BASE_COLOR_TEXTURE_INDEX], s_sampler, texcoord);
+        base_color_and_opacity = base_color_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_BASE_COLOR_TEXTURE_INDEX], s_wrap_sampler, texcoord);
     }
     else
     {
@@ -89,7 +119,7 @@ brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_
     brx_float surface_metallic;
     brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_METALLIC_ROUGHNESS))
     {
-        brx_float2 roughness_metallic = brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_METALLIC_ROUGHNESS_TEXTURE_INDEX], s_sampler, texcoord).yz;
+        brx_float2 roughness_metallic = brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_METALLIC_ROUGHNESS_TEXTURE_INDEX], s_wrap_sampler, texcoord).yz;
         out_surface_roughness = roughness_factor * roughness_metallic.x;
         surface_metallic = metallic_factor * roughness_metallic.y;
     }
@@ -108,7 +138,7 @@ brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_
 
     brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_EMISSIVE))
     {
-        out_surface_emissive = emissive_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_EMISSIVE_TEXTURE_INDEX], s_sampler, texcoord).xyz;
+        out_surface_emissive = emissive_factor * brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_EMISSIVE_TEXTURE_INDEX], s_wrap_sampler, texcoord).xyz;
     }
     else
     {
@@ -146,104 +176,127 @@ brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_
     return true;
 }
 
-void brx_vct_application_bridge_get_environment_lighting_illumination(in brx_float3 in_surface_position_world_space, in brx_float3 in_surface_shading_normal_world_space, in brx_float3 in_surface_diffuse_color, in brx_float3 in_surface_specular_color, in brx_float in_surface_roughness, out brx_float3 out_environment_lighting_illumination[BRX_VCT_VOXELIZATION_MAXIMUM_ENVIRONMENT_LIGHTING_ILLUMINATION_FLOAT_COUNT])
+void brx_vct_application_bridge_get_outgoing_radiances(in brx_float3 in_outgoing_directions_world_space[(brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT))], in brx_float3 in_surface_position_world_space, in brx_float3 in_surface_shading_normal_world_space, in brx_float3 in_surface_emissive, in brx_float3 in_surface_diffuse_color, in brx_float3 in_surface_specular_color, in brx_float in_surface_roughness, out brx_float3 out_outgoing_radiances[(brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT))])
 {
-    brx_branch if ((ENVIRONMENT_MAP_LAYOUT_EQUIRECTANGULAR == g_environment_map_layout) || (ENVIRONMENT_MAP_LAYOUT_OCTAHEDRAL == g_environment_map_layout))
+    brx_float INTERNAL_IRRADIANCE_THRESHOLD = 1e-4;
+    brx_float INTERNAL_ATTENUATION_THRESHOLD = 1e-4;
+
+    // Emissive
     {
-        for (brx_int environment_map_sh_coefficient_index = 0; environment_map_sh_coefficient_index < BRX_SH_COEFFICIENT_COUNT; ++environment_map_sh_coefficient_index)
+        brx_unroll for (brx_int direction_index = 0; direction_index < (brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT)); ++direction_index)
         {
-            out_environment_lighting_illumination[environment_map_sh_coefficient_index] = brx_uint_as_float(brx_byte_address_buffer_load3(t_environment_map_sh_coefficients, (3 * (environment_map_sh_coefficient_index << 2))));
+            out_outgoing_radiances[direction_index] = in_surface_emissive;
+        }
+    }
+
+    // Albedo
+    brx_float3 surface_diffuse_albedo;
+    brx_float3 surface_specular_albedos[(brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT))];
+    brx_branch if ((g_area_lighting_count > 0) || ((ENVIRONMENT_MAP_LAYOUT_EQUIRECTANGULAR == g_environment_map_layout) || (ENVIRONMENT_MAP_LAYOUT_OCTAHEDRAL == g_environment_map_layout)))
+    {
+        surface_diffuse_albedo = in_surface_diffuse_color;
+
+        brx_unroll for (brx_int direction_index = 0; direction_index < (brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT)); ++direction_index)
+        {
+            brx_float3 outgoing_direction_world_space = in_outgoing_directions_world_space[direction_index];
+
+            brx_branch if (brx_dot(in_surface_shading_normal_world_space, outgoing_direction_world_space) > 0.0)
+            {
+                surface_specular_albedos[direction_index] = brx_hdr_specular_albedo(in_surface_specular_color, in_surface_roughness, in_surface_shading_normal_world_space, outgoing_direction_world_space);
+            }
+            else
+            {
+                surface_specular_albedos[direction_index] = brx_float3(0.0, 0.0, 0.0);
+            }
         }
     }
     else
     {
-        for (brx_int environment_map_sh_coefficient_index = 0; environment_map_sh_coefficient_index < BRX_SH_COEFFICIENT_COUNT; ++environment_map_sh_coefficient_index)
+        surface_diffuse_albedo = brx_float3(0.0, 0.0, 0.0);
+
+        brx_unroll for (brx_int direction_index = 0; direction_index < (brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT)); ++direction_index)
         {
-            out_environment_lighting_illumination[environment_map_sh_coefficient_index] = brx_float3(0.0, 0.0, 0.0);
+            surface_specular_albedos[direction_index] = brx_float3(0.0, 0.0, 0.0);
         }
     }
-}
 
-brx_float3 brx_vct_application_bridge_get_environment_lighting_radiance(in brx_float3 in_environment_lighting_illumination[BRX_VCT_VOXELIZATION_MAXIMUM_ENVIRONMENT_LIGHTING_ILLUMINATION_FLOAT_COUNT], in brx_float3 in_outgoing_direction_world_space, in brx_float3 in_surface_position_world_space, in brx_float3 in_surface_shading_normal_world_space, in brx_float3 in_surface_diffuse_color, in brx_float3 in_surface_specular_color, in brx_float in_surface_roughness)
-{
-    brx_float3 environment_lighting_radiance;
-    brx_branch if ((ENVIRONMENT_MAP_LAYOUT_EQUIRECTANGULAR == g_environment_map_layout) || (ENVIRONMENT_MAP_LAYOUT_OCTAHEDRAL == g_environment_map_layout))
+    // Area Lighting
+    brx_loop for (brx_int area_lighting_index = 0; area_lighting_index < g_area_lighting_count; ++area_lighting_index)
     {
-        brx_float3 outgoing_direction_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(in_outgoing_direction_world_space, 0.0)).xyz;
+        brx_float4 area_lighting_auxiliary_packed_vectors[3] = brx_array_constructor_begin(brx_float4, 3)
+            g_area_lightings[3 * area_lighting_index + 0] brx_array_constructor_split
+            g_area_lightings[3 * area_lighting_index + 1] brx_array_constructor_split
+            g_area_lightings[3 * area_lighting_index + 2] brx_array_constructor_end;
 
-        brx_float3 shading_normal_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(in_surface_shading_normal_world_space, 0.0)).xyz;
+        brx_float3 area_lighting_position = area_lighting_auxiliary_packed_vectors[0].xyz;
+        brx_float3 area_lighting_edge1 = area_lighting_auxiliary_packed_vectors[1].xyz;
+        brx_float3 area_lighting_edge2 = area_lighting_auxiliary_packed_vectors[2].xyz;
 
-        brx_float3 surface_diffuse_albedo = in_surface_diffuse_color;
+        // https://github.com/AcademySoftwareFoundation/Imath/blob/main/src/Imath/half.h
+        // HALF_MAX 65504.0
+        brx_float3 area_lighting_radiance = brx_clamp(brx_float3(area_lighting_auxiliary_packed_vectors[0].w, area_lighting_auxiliary_packed_vectors[1].w, area_lighting_auxiliary_packed_vectors[2].w), brx_float3(0.0, 0.0, 0.0), brx_float3(65504.0, 65504.0, 65504.0));
 
-        brx_float3 surface_specular_albedo;
-        brx_float non_rotation_transfer_function_lut_sh_coefficients[BRX_SH_PROJECTION_TRANSFER_FUNCTION_LUT_SH_COEFFICIENT_COUNT];
+        brx_float3 quad_vertices_world_space[4] = brx_array_constructor_begin(brx_float3, 4)
+            area_lighting_position brx_array_constructor_split
+            (area_lighting_position + area_lighting_edge1) brx_array_constructor_split
+            (area_lighting_position + area_lighting_edge1 + area_lighting_edge2) brx_array_constructor_split
+            (area_lighting_position + area_lighting_edge2) brx_array_constructor_end;
+
+        brx_float quad_culling_range;
         {
-            brx_float surface_alpha = brx_max(brx_float(BRX_TROWBRIDGE_REITZ_ALPHA_MINIMUM), in_surface_roughness * in_surface_roughness);
-            brx_float NdotV = brx_max(brx_float(BRX_TROWBRIDGE_REITZ_NDOTV_MINIMUM), brx_dot(shading_normal_environment_map_space, outgoing_direction_environment_map_space));
+            brx_float quad_area = brx_length(brx_cross(quad_vertices_world_space[1] - quad_vertices_world_space[0], quad_vertices_world_space[3] - quad_vertices_world_space[0]));
+            brx_float maximum_area_lighting_radiance = brx_max(brx_max(area_lighting_radiance.x, area_lighting_radiance.y), area_lighting_radiance.z);
 
-            brx_float2 raw_lut_uv = brx_float2(brx_max(0.0, 1.0 - NdotV), brx_max(0.0, 1.0 - surface_alpha));
+            quad_culling_range = brx_sqrt((maximum_area_lighting_radiance * quad_area) / INTERNAL_IRRADIANCE_THRESHOLD);
+        }
 
+        brx_float area_lighting_attenuation = brx_ltc_attenuation(quad_culling_range, in_surface_shading_normal_world_space, quad_vertices_world_space);
+
+        brx_branch if (area_lighting_attenuation > INTERNAL_ATTENUATION_THRESHOLD)
+        {
+            brx_unroll for (brx_int direction_index = 0; direction_index < (brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT)); ++direction_index)
             {
-                // Remap: [0, 1] -> [0.5/size, 1.0 - 0.5/size]
-                // U3D: [Remap01ToHalfTexelCoord](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl#L661)
-                // UE4: [N/A](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/RectLight.ush#L450)
-                brx_int2 specular_hdr_fresnel_factors_lut_dimension = brx_texture_2d_get_dimension(t_lut_specular_hdr_fresnel_factors, 0);
-                brx_float2 specular_hdr_fresnel_factors_lut_uv = (brx_float2(0.5, 0.5) + brx_float2(specular_hdr_fresnel_factors_lut_dimension.x - 1, specular_hdr_fresnel_factors_lut_dimension.y - 1) * raw_lut_uv) / brx_float2(specular_hdr_fresnel_factors_lut_dimension.x, specular_hdr_fresnel_factors_lut_dimension.y);
+                brx_float3 outgoing_direction_world_space = in_outgoing_directions_world_space[direction_index];
 
-                brx_float2 fresnel_factor = brx_sample_level_2d(t_lut_specular_hdr_fresnel_factors, s_sampler, specular_hdr_fresnel_factors_lut_uv, 0.0).xy;
-                brx_float f0_factor = fresnel_factor.x;
-                brx_float f90_factor = fresnel_factor.y;
-
-                // UE4: [EnvBRDF](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L476)
-                brx_float3 f0 = in_surface_specular_color;
-                brx_float f90 = brx_clamp(50.0 * f0.g, 0.0, 1.0);
-
-                // UE4: [EnvBRDF](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/BRDF.ush#L471)
-                // U3D: [GetPreIntegratedFGDGGXAndDisneyDiffuse](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.high-definition/Runtime/Material/PreIntegratedFGD/PreIntegratedFGD.hlsl#L8)
-                surface_specular_albedo = f0 * f0_factor + brx_float3(f90, f90, f90) * f90_factor;
-            }
-
-            {
-                // Remap: [0, 1] -> [0.5/size, 1.0 - 0.5/size]
-                // U3D: [Remap01ToHalfTexelCoord](https://github.com/Unity-Technologies/Graphics/blob/v10.8.0/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl#L661)
-                // UE4: [N/A](https://github.com/EpicGames/UnrealEngine/blob/4.27/Engine/Shaders/Private/RectLight.ush#L450)
-                brx_int3 specular_transfer_function_sh_coefficients_lut_dimension = brx_texture_2d_array_get_dimension(t_lut_specular_transfer_function_sh_coefficients, 0);
-                brx_float2 specular_transfer_function_sh_coefficients_lut_uv = (brx_float2(0.5, 0.5) + brx_float2(specular_transfer_function_sh_coefficients_lut_dimension.x - 1, specular_transfer_function_sh_coefficients_lut_dimension.y - 1) * raw_lut_uv) / brx_float2(specular_transfer_function_sh_coefficients_lut_dimension.x, specular_transfer_function_sh_coefficients_lut_dimension.y);
-
-                brx_unroll for (brx_int transfer_function_lut_sh_coefficient_index = 0; transfer_function_lut_sh_coefficient_index < BRX_SH_PROJECTION_TRANSFER_FUNCTION_LUT_SH_COEFFICIENT_COUNT; ++transfer_function_lut_sh_coefficient_index)
+                brx_branch if (brx_dot(in_surface_shading_normal_world_space, outgoing_direction_world_space) > 0.0)
                 {
-                    non_rotation_transfer_function_lut_sh_coefficients[transfer_function_lut_sh_coefficient_index] = brx_sample_level_2d_array(t_lut_specular_transfer_function_sh_coefficients, s_sampler, brx_float3(specular_transfer_function_sh_coefficients_lut_uv, brx_float(transfer_function_lut_sh_coefficient_index)), 0.0).x;
+                    brx_float3 surface_specular_albedo = surface_specular_albedos[direction_index];
+
+                    out_outgoing_radiances[direction_index] += (area_lighting_attenuation * brx_ltc_radiance(surface_diffuse_albedo, surface_specular_albedo, in_surface_roughness, in_surface_shading_normal_world_space, outgoing_direction_world_space, area_lighting_radiance, in_surface_position_world_space, quad_vertices_world_space));
                 }
             }
         }
-
-        brx_float3 environment_lighting_diffuse_radiance = brx_sh_diffuse_radiance(surface_diffuse_albedo, shading_normal_environment_map_space, in_environment_lighting_illumination);
-
-        brx_float3 environment_lighting_specular_radiance = brx_sh_specular_radiance(surface_specular_albedo, outgoing_direction_environment_map_space, shading_normal_environment_map_space, non_rotation_transfer_function_lut_sh_coefficients, in_environment_lighting_illumination);
-
-        environment_lighting_radiance = environment_lighting_diffuse_radiance + environment_lighting_specular_radiance;
     }
-    else
+
+    // Environment Lighting
+    brx_branch if ((ENVIRONMENT_MAP_LAYOUT_EQUIRECTANGULAR == g_environment_map_layout) || (ENVIRONMENT_MAP_LAYOUT_OCTAHEDRAL == g_environment_map_layout))
     {
-        environment_lighting_radiance = brx_float3(0.0, 0.0, 0.0);
+        brx_float3 environment_map_sh_coefficients[BRX_SH_COEFFICIENT_COUNT];
+        for (brx_int environment_map_sh_coefficient_index = 0; environment_map_sh_coefficient_index < BRX_SH_COEFFICIENT_COUNT; ++environment_map_sh_coefficient_index)
+        {
+            environment_map_sh_coefficients[environment_map_sh_coefficient_index] = brx_uint_as_float(brx_byte_address_buffer_load3(t_environment_map_sh_coefficients, (3 * (environment_map_sh_coefficient_index << 2))));
+        }
+
+        brx_unroll for (brx_int direction_index = 0; direction_index < (brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_WIDTH_COUNT) * brx_int(BRX_VCT_CLIPMAP_ILLUMINATION_TEXTURE_DIRECTION_HEIGHT_COUNT)); ++direction_index)
+        {
+            brx_float3 outgoing_direction_world_space = in_outgoing_directions_world_space[direction_index];
+
+            brx_branch if (brx_dot(in_surface_shading_normal_world_space, outgoing_direction_world_space) > 0.0)
+            {
+                brx_float3 surface_specular_albedo = surface_specular_albedos[direction_index];
+
+                brx_float3 outgoing_direction_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(outgoing_direction_world_space, 0.0)).xyz;
+
+                brx_float3 shading_normal_environment_map_space = brx_mul(g_world_to_environment_map_transform, brx_float4(in_surface_shading_normal_world_space, 0.0)).xyz;
+
+                brx_float3 environment_lighting_diffuse_radiance = brx_sh_diffuse_radiance(surface_diffuse_albedo, shading_normal_environment_map_space, environment_map_sh_coefficients);
+
+                brx_float3 environment_lighting_specular_radiance = brx_sh_specular_radiance(surface_specular_albedo, in_surface_roughness, shading_normal_environment_map_space, outgoing_direction_environment_map_space, environment_map_sh_coefficients);
+
+                out_outgoing_radiances[direction_index] += (environment_lighting_diffuse_radiance + environment_lighting_specular_radiance);
+            }
+        }
     }
-
-    return environment_lighting_radiance;
-}
-
-brx_int brx_vct_application_bridge_get_direct_lighting_count(in brx_float3 in_surface_position_world_space, in brx_float3 in_surface_shading_normal_world_space, in brx_float3 in_surface_diffuse_color, in brx_float3 in_surface_specular_color, in brx_float in_surface_roughness)
-{
-    return 0;
-}
-
-brx_float3 brx_vct_application_bridge_get_direct_lighting_illumination(in brx_int in_direct_lighting_index, in brx_float3 in_surface_position_world_space, in brx_float3 in_surface_shading_normal_world_space, in brx_float3 in_surface_diffuse_color, in brx_float3 in_surface_specular_color, in brx_float in_surface_roughness)
-{
-    return brx_float3(0.0, 0.0, 0.0);
-}
-
-brx_float3 brx_vct_application_bridge_get_direct_lighting_radiance(in brx_int in_direct_lighting_index, in brx_float3 in_direct_lighting_illumination, in brx_float3 in_outgoing_direction_world_space, in brx_float3 in_surface_position_world_space, in brx_float3 in_surface_shading_normal_world_space, in brx_float3 in_surface_diffuse_color, in brx_float3 in_surface_specular_color, in brx_float in_surface_roughness)
-{
-    return brx_float3(0.0, 0.0, 0.0);
 }
 
 brx_uint brx_vct_application_bridge_get_clipmap_mask(in brx_int3 in_mask_texture_coordinates)

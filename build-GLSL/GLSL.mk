@@ -120,6 +120,8 @@ all : \
 	$(SPIRV_DIR)/_internal_full_screen_transfer_vertex.inl \
 	$(SPIRV_DIR)/_internal_full_screen_transfer_fragment.inl \
 	$(SPIRV_DIR)/_internal_deforming_compute.inl \
+	$(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.inl \
+	$(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.inl \
 	$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl \
 	$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl \
 	$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl \
@@ -150,6 +152,14 @@ $(SPIRV_DIR)/_internal_full_screen_transfer_fragment.inl $(SPIRV_DIR)/_internal_
 $(SPIRV_DIR)/_internal_deforming_compute.inl $(SPIRV_DIR)/_internal_deforming_compute.d : $(SHADERS_DIR)/deforming_compute.bsl
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
 	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=comp $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_deforming_compute.d" -o "$(SPIRV_DIR)/_internal_deforming_compute.inl" "$(SHADERS_DIR)/deforming_compute.bsl"
+
+$(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.inl $(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.d : $(SHADERS_DIR)/area_lighting_emissive_vertex.bsl
+	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
+	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=vert $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.d" -o "$(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.inl" "$(SHADERS_DIR)/area_lighting_emissive_vertex.bsl"
+
+$(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.inl $(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.d : $(SHADERS_DIR)/area_lighting_emissive_fragment.bsl
+	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
+	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=frag $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.d" -o "$(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.inl" "$(SHADERS_DIR)/area_lighting_emissive_fragment.bsl"
 
 $(SPIRV_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl $(SPIRV_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d : $(SHADERS_DIR)/environment_lighting_sh_projection_environment_map_clear_compute.bsl
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
@@ -227,6 +237,8 @@ $(SPIRV_DIR)/_internal_post_processing_fragment.inl $(SPIRV_DIR)/_internal_post_
 	$(SPIRV_DIR)/_internal_full_screen_transfer_vertex.d \
 	$(SPIRV_DIR)/_internal_full_screen_transfer_fragment.d \
 	$(SPIRV_DIR)/_internal_deforming_compute.d \
+	$(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.d \
+	$(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.d \
 	$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d \
 	$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.d \
 	$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.d \
@@ -250,6 +262,8 @@ clean:
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_full_screen_transfer_vertex.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_full_screen_transfer_fragment.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_deforming_compute.inl)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.inl)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.inl)
@@ -271,6 +285,8 @@ clean:
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_full_screen_transfer_vertex.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_full_screen_transfer_fragment.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_deforming_compute.d)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_area_lighting_emissive_vertex.d)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_area_lighting_emissive_fragment.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_environment_map_clear_compute.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_equirectangular_environment_map_compute.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_sh_projection_octahedral_environment_map_compute.d)

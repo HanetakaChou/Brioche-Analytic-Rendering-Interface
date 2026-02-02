@@ -22,7 +22,7 @@
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 
-void brx_vct_application_bridge_get_triangle_vertices(in brx_uint in_triangle_index, out brx_float3 out_triangle_vertex_position_world_space_a, out brx_float3 out_triangle_vertex_position_world_space_b, out brx_float3 out_triangle_vertex_position_world_space_c)
+void brx_vct_application_bridge_get_triangle_vertices(in brx_uint in_triangle_index, out brx_uint3 out_triangle_vertex_indices, out brx_float3 out_triangle_vertices_position_model_space[3], out brx_float3 out_triangle_vertices_position_world_space[3])
 {
     brx_uint buffer_texture_flags = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_AUXILIARY_BUFFER_INDEX], 0);
 
@@ -49,45 +49,49 @@ void brx_vct_application_bridge_get_triangle_vertices(in brx_uint in_triangle_in
         brx_uint3 vertex_position_buffer_offset = SURFACE_VERTEX_POSITION_BUFFER_STRIDE * triangle_vertex_indices;
 
         brx_uint3 packed_vector_vertices_position_binding[3];
-        packed_vector_vertices_position_binding[0] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], vertex_position_buffer_offset.x);
-        packed_vector_vertices_position_binding[1] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], vertex_position_buffer_offset.y);
-        packed_vector_vertices_position_binding[2] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], vertex_position_buffer_offset.z);
+        packed_vector_vertices_position_binding[0] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset.x);
+        packed_vector_vertices_position_binding[1] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset.y);
+        packed_vector_vertices_position_binding[2] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset.z);
 
         triangle_vertices_position_model_space[0] = brx_uint_as_float(packed_vector_vertices_position_binding[0]);
         triangle_vertices_position_model_space[1] = brx_uint_as_float(packed_vector_vertices_position_binding[1]);
         triangle_vertices_position_model_space[2] = brx_uint_as_float(packed_vector_vertices_position_binding[2]);
     }
 
+    brx_float3 triangle_vertices_position_world_space[3];
     {
-        out_triangle_vertex_position_world_space_a = brx_mul(g_model_transform, brx_float4(triangle_vertices_position_model_space[0], 1.0)).xyz;
-        out_triangle_vertex_position_world_space_b = brx_mul(g_model_transform, brx_float4(triangle_vertices_position_model_space[1], 1.0)).xyz;
-        out_triangle_vertex_position_world_space_c = brx_mul(g_model_transform, brx_float4(triangle_vertices_position_model_space[2], 1.0)).xyz;
+        triangle_vertices_position_world_space[0] = brx_mul(g_model_transform, brx_float4(triangle_vertices_position_model_space[0], 1.0)).xyz;
+        triangle_vertices_position_world_space[1] = brx_mul(g_model_transform, brx_float4(triangle_vertices_position_model_space[1], 1.0)).xyz;
+        triangle_vertices_position_world_space[2] = brx_mul(g_model_transform, brx_float4(triangle_vertices_position_model_space[2], 1.0)).xyz;
     }
+
+    out_triangle_vertex_indices = triangle_vertex_indices;
+
+    out_triangle_vertices_position_model_space[0] = triangle_vertices_position_model_space[0];
+    out_triangle_vertices_position_model_space[1] = triangle_vertices_position_model_space[1];
+    out_triangle_vertices_position_model_space[2] = triangle_vertices_position_model_space[2];
+
+    out_triangle_vertices_position_world_space[0] = triangle_vertices_position_world_space[0];
+    out_triangle_vertices_position_world_space[1] = triangle_vertices_position_world_space[1];
+    out_triangle_vertices_position_world_space[2] = triangle_vertices_position_world_space[2];
 }
 
-void brx_vct_application_bridge_get_vertex(in brx_uint in_vertex_index, out brx_float3 out_vertex_position_world_space, out brx_float3 out_vertex_normal_world_space, out brx_float4 out_vertex_tangent_world_space, out brx_float2 out_vertex_texcoord)
+void brx_vct_application_bridge_get_vertex(in brx_uint in_triangle_vertex_index, in brx_uint3 in_triangle_vertex_indices, in brx_float3 in_triangle_vertices_position_model_space[3], in brx_float3 in_triangle_vertices_position_world_space[3], out brx_float3 out_vertex_normal_world_space, out brx_float4 out_vertex_tangent_world_space, out brx_float2 out_vertex_texcoord)
 {
-    brx_uint buffer_texture_flags = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_AUXILIARY_BUFFER_INDEX], 0);
+    brx_float3 triangle_non_unit_normal_model_space = brx_cross(in_triangle_vertices_position_model_space[1] - in_triangle_vertices_position_model_space[0], in_triangle_vertices_position_model_space[2] - in_triangle_vertices_position_model_space[0]);
 
     brx_uint vertex_index;
-    brx_branch if (0u != (buffer_texture_flags & SURFACE_BUFFER_FLAG_UINT16_INDEX))
+    brx_branch if (0 == in_triangle_vertex_index)
     {
-        brx_uint index_buffer_offset = (0u == ((SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(in_vertex_index)) & 3u)) ? (SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(in_vertex_index)) : ((SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(in_vertex_index)) - 2u);
-        brx_uint packed_vector_index_buffer = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], index_buffer_offset);
-        brx_uint2 unpacked_vector_index_buffer = brx_R16G16_UINT_to_UINT2(packed_vector_index_buffer);
-        vertex_index = (0u == ((SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(in_vertex_index)) & 3u)) ? unpacked_vector_index_buffer.x : unpacked_vector_index_buffer.y;
+        vertex_index = in_triangle_vertex_indices.x;
+    }
+    else if (1 == in_triangle_vertex_index)
+    {
+        vertex_index = in_triangle_vertex_indices.y;
     }
     else
     {
-        brx_uint index_buffer_offset = SURFACE_UINT32_INDEX_BUFFER_STRIDE * brx_uint(in_vertex_index);
-        vertex_index = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], index_buffer_offset);
-    }
-
-    brx_float3 vertex_position_model_space;
-    {
-        brx_uint vertex_position_buffer_offset = SURFACE_VERTEX_POSITION_BUFFER_STRIDE * vertex_index;
-        brx_uint3 packed_vector_vertex_position_binding = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset);
-        vertex_position_model_space = brx_uint_as_float(packed_vector_vertex_position_binding);
+        vertex_index = in_triangle_vertex_indices.z;
     }
 
     brx_float3 vertex_normal_model_space;
@@ -104,7 +108,12 @@ void brx_vct_application_bridge_get_vertex(in brx_uint in_vertex_index, out brx_
         vertex_texcoord = brx_clamp(brx_unpack_half2(packed_vector_vertex_varying_binding.z), brx_float2(-65504.0, -65504.0), brx_float2(65504.0, 65504.0));
     }
 
-    out_vertex_position_world_space = brx_mul(g_model_transform, brx_float4(vertex_position_model_space, 1.0)).xyz;
+    // flip back side normal
+    brx_branch if (brx_dot(triangle_non_unit_normal_model_space, vertex_normal_model_space) < 0.0)
+    {
+        vertex_normal_model_space = -vertex_normal_model_space;
+        vertex_tangent_model_space = -vertex_tangent_model_space;
+    }
 
     out_vertex_normal_world_space = brx_mul(g_model_transform, brx_float4(vertex_normal_model_space, 0.0)).xyz;
     out_vertex_tangent_world_space = brx_float4(brx_mul(g_model_transform, brx_float4(vertex_tangent_model_space.xyz, 0.0)).xyz, vertex_tangent_model_space.w);

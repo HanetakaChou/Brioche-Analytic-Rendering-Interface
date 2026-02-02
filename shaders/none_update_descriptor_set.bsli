@@ -21,7 +21,7 @@
 // D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT 4096
 // Vulkan Core: maxUniformBufferRange 16384 = 16 * 1024
 // Vulkan Roadmap 2022: maxUniformBufferRange 65536 = 16 * 4096
-#define NONE_UPDATE_MAX_AREA_LIGHTING_COUNT 1347u
+#define NONE_UPDATE_MAX_AREA_LIGHTING_COUNT 1346u
 
 brx_read_write_byte_address_buffer(u_environment_map_sh_coefficients, 0, 0);
 
@@ -48,10 +48,14 @@ brx_cbuffer(none_update_set_uniform_buffer_binding, 0, 6)
     brx_uint _unused_padding_1;
     brx_float3 g_clipmap_center;
     brx_uint _unused_padding_2;
+    brx_float3 g_directional_lighting_irradiance;
+    brx_uint _unused_padding_3;
+    brx_float3 g_directional_lighting_direction;
+    brx_uint _unused_padding_4;
+    brx_uint g_directional_lighting_visible;
+    brx_uint g_area_lighting_count;
     brx_uint g_environment_map_layout;
     brx_uint g_renderer_gi_quality;
-    brx_uint g_area_lighting_count;
-    brx_uint _unused_padding_3;
     brx_float4 g_area_lightings[3 * brx_int(NONE_UPDATE_MAX_AREA_LIGHTING_COUNT)];
 };
 

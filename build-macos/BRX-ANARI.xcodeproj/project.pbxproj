@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8483487B2F36062A00C7A9C5 /* brx_anari_pal_directional_light.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8483487A2F36062A00C7A9C5 /* brx_anari_pal_directional_light.cpp */; };
+		8483487D2F36063800C7A9C5 /* brx_anari_pal_camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8483487C2F36063700C7A9C5 /* brx_anari_pal_camera.cpp */; };
 		849418B02F13211E0022634B /* brx_anari_pal_hdri_light.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 849418AB2F13211E0022634B /* brx_anari_pal_hdri_light.cpp */; };
 		849418B12F13211E0022634B /* brx_anari_pal_device.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 849418AA2F13211E0022634B /* brx_anari_pal_device.cpp */; };
 		849418B22F13211E0022634B /* brx_anari_pal_image.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 849418AC2F13211E0022634B /* brx_anari_pal_image.cpp */; };
@@ -21,6 +23,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8483487A2F36062A00C7A9C5 /* brx_anari_pal_directional_light.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_anari_pal_directional_light.cpp; path = ../source/brx_anari_pal_directional_light.cpp; sourceTree = SOURCE_ROOT; };
+		8483487C2F36063700C7A9C5 /* brx_anari_pal_camera.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_anari_pal_camera.cpp; path = ../source/brx_anari_pal_camera.cpp; sourceTree = SOURCE_ROOT; };
 		8494177B2F12F18E0022634B /* BRX-ANARI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "BRX-ANARI.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
 		849418AA2F13211E0022634B /* brx_anari_pal_device.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_anari_pal_device.cpp; path = ../source/brx_anari_pal_device.cpp; sourceTree = SOURCE_ROOT; };
 		849418AB2F13211E0022634B /* brx_anari_pal_hdri_light.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = brx_anari_pal_hdri_light.cpp; path = ../source/brx_anari_pal_hdri_light.cpp; sourceTree = SOURCE_ROOT; };
@@ -54,11 +58,13 @@
 			isa = PBXGroup;
 			children = (
 				849418AA2F13211E0022634B /* brx_anari_pal_device.cpp */,
-				849418AB2F13211E0022634B /* brx_anari_pal_hdri_light.cpp */,
-				849418AC2F13211E0022634B /* brx_anari_pal_image.cpp */,
-				84DA4C822F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp */,
+				8483487C2F36063700C7A9C5 /* brx_anari_pal_camera.cpp */,
 				849418AD2F13211E0022634B /* brx_anari_pal_resource.cpp */,
+				849418AC2F13211E0022634B /* brx_anari_pal_image.cpp */,
 				849418AE2F13211E0022634B /* brx_anari_pal_surface.cpp */,
+				8483487A2F36062A00C7A9C5 /* brx_anari_pal_directional_light.cpp */,
+				84DA4C822F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp */,
+				849418AB2F13211E0022634B /* brx_anari_pal_hdri_light.cpp */,
 				849418AF2F13211E0022634B /* brx_anari_pal_voxel_cone_tracing.cpp */,
 				849418B62F13A2640022634B /* Frameworks */,
 				849417132F12EE270022634B /* Products */,
@@ -190,6 +196,8 @@
 			files = (
 				849418B02F13211E0022634B /* brx_anari_pal_hdri_light.cpp in Sources */,
 				849418B12F13211E0022634B /* brx_anari_pal_device.cpp in Sources */,
+				8483487B2F36062A00C7A9C5 /* brx_anari_pal_directional_light.cpp in Sources */,
+				8483487D2F36063800C7A9C5 /* brx_anari_pal_camera.cpp in Sources */,
 				849418B22F13211E0022634B /* brx_anari_pal_image.cpp in Sources */,
 				84DA4C832F2A98AA00C52C4D /* brx_anari_pal_quad_light.cpp in Sources */,
 				849418B32F13211E0022634B /* brx_anari_pal_surface.cpp in Sources */,

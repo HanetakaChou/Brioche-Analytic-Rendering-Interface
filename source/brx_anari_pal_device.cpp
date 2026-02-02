@@ -26,7 +26,6 @@
 #include "../shaders/none_update_resource_binding.bsli"
 #include "../shaders/deforming_surface_resource_binding.bsli"
 #include "../shaders/surface_resource_binding.bsli"
-#include "../../Brioche-Shader-Language/include/brx_reversed_z.h"
 #include "../../DLB/DLB.h"
 
 extern "C" brx_anari_device *brx_anari_new_device(void *wsi_connection)
@@ -78,7 +77,8 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_forward_shading_render_pass(NULL),
       m_environment_lighting_skybox_equirectangular_map_pipeline(NULL),
       m_environment_lighting_skybox_octahedral_map_pipeline(NULL),
-      m_forward_shading_pipeline(NULL),
+      m_forward_shading_physically_based_rendering_pipeline(NULL),
+      m_forward_shading_toon_shading_pipeline(NULL),
       m_display_color_image_format(BRX_PAL_COLOR_ATTACHMENT_FORMAT_A2R10G10B10_UNORM_PACK32),
       m_post_processing_render_pass(NULL),
       m_post_processing_pipeline(NULL),
@@ -125,6 +125,9 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_place_holder_asset_image(NULL),
       m_place_holder_storage_image(NULL),
       m_world_surface_group_instances{},
+      m_directional_light_visible(false),
+      m_directional_light_irradiance{1.0F, 1.0F, 1.0F},
+      m_directional_light_direction{0.0F, 0.0F, -1.0F},
       m_quad_lights{},
       m_area_lighting_emissive_pipeline(NULL),
       m_quad_lights_enable_debug_renderer(true),
@@ -152,7 +155,8 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_voxel_cone_tracing_zero_pipeline(NULL),
       m_voxel_cone_tracing_clear_pipeline(NULL),
       m_voxel_cone_tracing_voxelization_render_pass(NULL),
-      m_voxel_cone_tracing_voxelization_pipeline(NULL),
+      m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline(NULL),
+      m_voxel_cone_tracing_voxelization_toon_shading_pipeline(NULL),
       m_voxel_cone_tracing_cone_tracing_low_pipeline(NULL),
       m_voxel_cone_tracing_cone_tracing_medium_pipeline(NULL),
       m_voxel_cone_tracing_cone_tracing_high_pipeline(NULL),
@@ -161,7 +165,8 @@ brx_anari_pal_device::brx_anari_pal_device()
 #ifndef NDEBUG
       m_renderer_gi_quality_lock(false),
 #endif
-      m_renderer_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY_DISABLE)
+      m_renderer_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY_DISABLE),
+      m_renderer_style(BRX_ANARI_RENDERER_STYLE_PHYSICALLY_BASED_RENDERING)
 {
 }
 
@@ -192,7 +197,8 @@ brx_anari_pal_device::~brx_anari_pal_device()
     assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_R8G8_UNORM == this->m_gbuffer_roughness_metallic_image_format);
     assert(BRX_PAL_DEPTH_STENCIL_ATTACHMENT_FORMAT_UNDEFINED == this->m_scene_depth_image_format);
     assert(NULL == this->m_forward_shading_render_pass);
-    assert(NULL == this->m_forward_shading_pipeline);
+    assert(NULL == this->m_forward_shading_physically_based_rendering_pipeline);
+    assert(NULL == this->m_forward_shading_toon_shading_pipeline);
     assert(BRX_PAL_COLOR_ATTACHMENT_FORMAT_A2R10G10B10_UNORM_PACK32 == this->m_display_color_image_format);
     assert(NULL == this->m_post_processing_render_pass);
     assert(NULL == this->m_post_processing_pipeline);
@@ -251,7 +257,8 @@ brx_anari_pal_device::~brx_anari_pal_device()
     assert(NULL == this->m_voxel_cone_tracing_zero_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_clear_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_voxelization_render_pass);
-    assert(NULL == this->m_voxel_cone_tracing_voxelization_pipeline);
+    assert(NULL == this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline);
+    assert(NULL == this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_cone_tracing_low_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_cone_tracing_medium_pipeline);
     assert(NULL == this->m_voxel_cone_tracing_cone_tracing_high_pipeline);
@@ -508,21 +515,21 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 // usually the vertices within the same model is organized from back to front
                 // we can simply use the over operation to render the result correctly (just like how we render the imgui)
 
-                assert(NULL == this->m_forward_shading_pipeline);
+                assert(NULL == this->m_forward_shading_physically_based_rendering_pipeline);
 #if defined(__GNUC__)
 #if defined(__linux__)
                 assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
                 {
 #include "../shaders/spirv/forward_shading_vertex.inl"
-#include "../shaders/spirv/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+#include "../shaders/spirv/forward_shading_physically_based_rendering_fragment.inl"
+                    this->m_forward_shading_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_physically_based_rendering_fragment_shader_module_code), forward_shading_physically_based_rendering_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
 #elif defined(__MACH__)
                 assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
                 {
 #include "../shaders/spirv/forward_shading_vertex.inl"
-#include "../shaders/spirv/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+#include "../shaders/spirv/forward_shading_physically_based_rendering_fragment.inl"
+                    this->m_forward_shading_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_physically_based_rendering_fragment_shader_module_code), forward_shading_physically_based_rendering_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
 #else
 #error Unknown Platform
@@ -533,15 +540,60 @@ void brx_anari_pal_device::init(void *wsi_connection)
                 case BRX_PAL_BACKEND_NAME_D3D12:
                 {
 #include "../shaders/dxil/forward_shading_vertex.inl"
-#include "../shaders/dxil/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+#include "../shaders/dxil/forward_shading_physically_based_rendering_fragment.inl"
+                    this->m_forward_shading_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_physically_based_rendering_fragment_shader_module_code), forward_shading_physically_based_rendering_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
                 break;
                 case BRX_PAL_BACKEND_NAME_VK:
                 {
 #include "../shaders/spirv/forward_shading_vertex.inl"
-#include "../shaders/spirv/forward_shading_fragment.inl"
-                    this->m_forward_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_fragment_shader_module_code), forward_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+#include "../shaders/spirv/forward_shading_physically_based_rendering_fragment.inl"
+                    this->m_forward_shading_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_physically_based_rendering_fragment_shader_module_code), forward_shading_physically_based_rendering_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                }
+                break;
+                default:
+                {
+                    assert(false);
+                }
+                }
+#else
+#error Unknown Compiler
+#endif
+
+                assert(NULL == this->m_forward_shading_toon_shading_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+                assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+                {
+#include "../shaders/spirv/forward_shading_vertex.inl"
+#include "../shaders/spirv/forward_shading_toon_shading_fragment.inl"
+                    this->m_forward_shading_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_toon_shading_fragment_shader_module_code), forward_shading_toon_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                }
+#elif defined(__MACH__)
+                assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+                {
+#include "../shaders/spirv/forward_shading_vertex.inl"
+#include "../shaders/spirv/forward_shading_toon_shading_fragment.inl"
+                    this->m_forward_shading_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_toon_shading_fragment_shader_module_code), forward_shading_toon_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
+                switch (this->m_device->get_backend_name())
+                {
+                case BRX_PAL_BACKEND_NAME_D3D12:
+                {
+#include "../shaders/dxil/forward_shading_vertex.inl"
+#include "../shaders/dxil/forward_shading_toon_shading_fragment.inl"
+                    this->m_forward_shading_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_toon_shading_fragment_shader_module_code), forward_shading_toon_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
+                }
+                break;
+                case BRX_PAL_BACKEND_NAME_VK:
+                {
+#include "../shaders/spirv/forward_shading_vertex.inl"
+#include "../shaders/spirv/forward_shading_toon_shading_fragment.inl"
+                    this->m_forward_shading_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_forward_shading_render_pass, this->m_surface_update_pipeline_layout, sizeof(forward_shading_vertex_shader_module_code), forward_shading_vertex_shader_module_code, sizeof(forward_shading_toon_shading_fragment_shader_module_code), forward_shading_toon_shading_fragment_shader_module_code, true, true, true, 1U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_GREATER, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_OVER_FIRST_AND_SECOND);
                 }
                 break;
                 default:
@@ -849,9 +901,13 @@ void brx_anari_pal_device::uninit()
             this->m_device->destroy_compute_pipeline(this->m_deforming_pipeline);
             this->m_deforming_pipeline = NULL;
 
-            assert(NULL != this->m_forward_shading_pipeline);
-            this->m_device->destroy_graphics_pipeline(this->m_forward_shading_pipeline);
-            this->m_forward_shading_pipeline = NULL;
+            assert(NULL != this->m_forward_shading_physically_based_rendering_pipeline);
+            this->m_device->destroy_graphics_pipeline(this->m_forward_shading_physically_based_rendering_pipeline);
+            this->m_forward_shading_physically_based_rendering_pipeline = NULL;
+
+            assert(NULL != this->m_forward_shading_toon_shading_pipeline);
+            this->m_device->destroy_graphics_pipeline(this->m_forward_shading_toon_shading_pipeline);
+            this->m_forward_shading_toon_shading_pipeline = NULL;
 
             assert(NULL != this->m_forward_shading_render_pass);
             this->m_device->destroy_render_pass(this->m_forward_shading_render_pass);
@@ -947,64 +1003,9 @@ void brx_anari_pal_device::uninit()
     this->m_device = NULL;
 }
 
-void brx_anari_pal_device::camera_set_position(brx_anari_vec3 position)
+void brx_anari_pal_device::renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style)
 {
-    this->m_camera_position = position;
-}
-
-void brx_anari_pal_device::camera_set_direction(brx_anari_vec3 direction)
-{
-    this->m_camera_direction = direction;
-}
-
-void brx_anari_pal_device::camera_set_up(brx_anari_vec3 up)
-{
-    this->m_camera_up = up;
-}
-
-void brx_anari_pal_device::camera_set_fovy(float fovy)
-{
-    this->m_camera_fovy = fovy;
-}
-
-void brx_anari_pal_device::camera_set_near(float near)
-{
-    this->m_camera_near = near;
-}
-
-void brx_anari_pal_device::camera_set_far(float far)
-{
-    this->m_camera_far = far;
-}
-
-brx_anari_vec3 brx_anari_pal_device::camera_get_position() const
-{
-    return this->m_camera_position;
-}
-
-brx_anari_vec3 brx_anari_pal_device::camera_get_direction() const
-{
-    return this->m_camera_direction;
-}
-
-brx_anari_vec3 brx_anari_pal_device::camera_get_up() const
-{
-    return this->m_camera_up;
-}
-
-float brx_anari_pal_device::camera_get_fovy() const
-{
-    return this->m_camera_fovy;
-}
-
-float brx_anari_pal_device::camera_get_near() const
-{
-    return this->m_camera_near;
-}
-
-float brx_anari_pal_device::camera_get_far() const
-{
-    return this->m_camera_far;
+    this->m_renderer_style = renderer_style;
 }
 
 void brx_anari_pal_device::frame_attach_window(void *wsi_window, float intermediate_width_scale, float intermediate_height_scale)
@@ -1505,45 +1506,11 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
         // TODO: Frustum Culling
 
-        // Upload Camera
-        DirectX::XMFLOAT4X4 camera_view_transform;
-        DirectX::XMFLOAT4X4 camera_projection_transform;
-        DirectX::XMFLOAT4X4 camera_inverse_view_transform;
-        DirectX::XMFLOAT4X4 camera_inverse_projection_transform;
-        {
-            {
-                DirectX::XMFLOAT3 const camera_position(this->m_camera_position.m_x, this->m_camera_position.m_y, this->m_camera_position.m_z);
-                DirectX::XMFLOAT3 const camera_direction(this->m_camera_direction.m_x, this->m_camera_direction.m_y, this->m_camera_direction.m_z);
-                DirectX::XMFLOAT3 const camera_up(this->m_camera_up.m_x, this->m_camera_up.m_y, this->m_camera_up.m_z);
-
-                DirectX::XMMATRIX simd_camera_view_transform = DirectX::XMMatrixLookToRH(DirectX::XMLoadFloat3(&camera_position), DirectX::XMLoadFloat3(&camera_direction), DirectX::XMLoadFloat3(&camera_up));
-                DirectX::XMStoreFloat4x4(&camera_view_transform, simd_camera_view_transform);
-
-                DirectX::XMVECTOR unused_determinant;
-                DirectX::XMMATRIX simd_inverse_view_transform = DirectX::XMMatrixInverse(&unused_determinant, simd_camera_view_transform);
-                DirectX::XMStoreFloat4x4(&camera_inverse_view_transform, simd_inverse_view_transform);
-            }
-
-            {
-                float const aspect = static_cast<float>(this->m_intermediate_width) / static_cast<float>(this->m_intermediate_height);
-
-                DirectX::XMMATRIX simd_camera_projection_transform = brx_DirectX_Math_Matrix_PerspectiveFovRH_ReversedZ(this->m_camera_fovy, aspect, this->m_camera_near, this->m_camera_far);
-                DirectX::XMStoreFloat4x4(&camera_projection_transform, simd_camera_projection_transform);
-
-                DirectX::XMVECTOR unused_determinant;
-                DirectX::XMMATRIX simd_camera_inverse_projection_transform = DirectX::XMMatrixInverse(&unused_determinant, simd_camera_projection_transform);
-                DirectX::XMStoreFloat4x4(&camera_inverse_projection_transform, simd_camera_inverse_projection_transform);
-            }
-        }
-
         // Upload None Update Uniform Buffer
         {
             none_update_set_uniform_buffer_binding *const none_update_set_uniform_buffer_destination = this->helper_compute_uniform_buffer_memory_address<none_update_set_uniform_buffer_binding>(this->m_frame_throttling_index, this->m_none_update_descriptor_set_uniform_buffer);
-            none_update_set_uniform_buffer_destination->g_view_transform = camera_view_transform;
-            none_update_set_uniform_buffer_destination->g_projection_transform = camera_projection_transform;
-            none_update_set_uniform_buffer_destination->g_inverse_view_transform = camera_inverse_view_transform;
-            none_update_set_uniform_buffer_destination->g_inverse_projection_transform = camera_inverse_projection_transform;
-
+            this->camera_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
+            this->directional_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
             this->quad_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
             this->hdri_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
             this->voxel_cone_tracing_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
@@ -1748,7 +1715,23 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
 
             // Forward Shading
             {
-                command_buffer->bind_graphics_pipeline(this->m_forward_shading_pipeline);
+                {
+                    brx_pal_graphics_pipeline *forward_shading_pipeline;
+                    switch (this->m_renderer_style)
+                    {
+                    case BRX_ANARI_RENDERER_STYLE_PHYSICALLY_BASED_RENDERING:
+                    {
+                        forward_shading_pipeline = this->m_forward_shading_physically_based_rendering_pipeline;
+                    }
+                    break;
+                    default:
+                    {
+                        assert(BRX_ANARI_RENDERER_STYLE_TOON_SHADING == this->m_renderer_style);
+                        forward_shading_pipeline = this->m_forward_shading_toon_shading_pipeline;
+                    }
+                    }
+                    command_buffer->bind_graphics_pipeline(forward_shading_pipeline);
+                }
 
                 for (auto const &world_surface_group_instance : this->m_world_surface_group_instances)
                 {
@@ -1801,7 +1784,7 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
         }
 
         // GI
-        this->voxel_cone_tracing_render(this->m_frame_throttling_index, command_buffer, this->m_voxel_cone_tracing_dirty, this->m_renderer_gi_quality);
+        this->voxel_cone_tracing_render(this->m_frame_throttling_index, command_buffer, this->m_voxel_cone_tracing_dirty, this->m_renderer_gi_quality, this->m_renderer_style);
 
         // Post Processing Pass
         {

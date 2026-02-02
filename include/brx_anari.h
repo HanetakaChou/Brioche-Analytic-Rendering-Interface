@@ -114,6 +114,14 @@ enum BRX_ANARI_RENDERER_GI_QUALITY : uint32_t
 	BRX_ANARI_RENDERER_GI_QUALITY_COUNT = 4
 };
 
+enum BRX_ANARI_RENDERER_STYLE : uint32_t
+{
+	BRX_ANARI_RENDERER_STYLE_BASE = 1,
+	BRX_ANARI_RENDERER_STYLE_PHYSICALLY_BASED_RENDERING = 1,
+	BRX_ANARI_RENDERER_STYLE_TOON_SHADING = 2,
+	BRX_ANARI_RENDERER_STYLE_COUNT = 2
+};
+
 struct brx_anari_surface_vertex_position
 {
 	float m_position[3];
@@ -175,7 +183,7 @@ struct brx_anari_rigid_transform
 	float m_translation[3];
 };
 
-struct BRX_ANARI_QUAD
+struct BRX_ANARI_QUAD_LIGHT
 {
 	brx_anari_vec3 m_radiance;
 	brx_anari_vec3 m_position;
@@ -195,9 +203,10 @@ public:
 	virtual brx_anari_surface_group_instance *world_new_surface_group_instance(brx_anari_surface_group *surface_group) = 0;
 	virtual void world_release_surface_group_instance(brx_anari_surface_group_instance *surface_group_instance) = 0;
 
-	virtual void set_quad_lights(uint32_t quad_light_count, BRX_ANARI_QUAD const *quad_lights) = 0;
-	virtual void set_quad_lights_enable_debug_renderer(bool quad_lights_enable_debug_renderer) = 0;
-	virtual bool get_quad_lights_enable_debug_renderer() const = 0;
+	virtual void directional_light_set(bool enable, brx_anari_vec3 irradiance, brx_anari_vec3 direction) = 0;
+
+	virtual void quad_light_set(uint32_t quad_light_count, BRX_ANARI_QUAD_LIGHT const *quad_lights) = 0;
+	virtual void quad_light_set_enable_debug_renderer(bool quad_lights_enable_debug_renderer) = 0;
 
 	virtual void hdri_light_set_radiance(brx_anari_image *radiance) = 0;
 	virtual void hdri_light_set_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT layout) = 0;
@@ -212,19 +221,9 @@ public:
 	virtual void renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY gi_quality) = 0;
 	virtual BRX_ANARI_RENDERER_GI_QUALITY renderer_get_gi_quality() const = 0;
 
-	virtual void camera_set_position(brx_anari_vec3 position) = 0;
-	virtual void camera_set_direction(brx_anari_vec3 direction) = 0;
-	virtual void camera_set_up(brx_anari_vec3 up) = 0;
-	virtual void camera_set_fovy(float fovy) = 0;
-	virtual void camera_set_near(float near) = 0;
-	virtual void camera_set_far(float far) = 0;
+	virtual void renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style) = 0;
 
-	virtual brx_anari_vec3 camera_get_position() const = 0;
-	virtual brx_anari_vec3 camera_get_direction() const = 0;
-	virtual brx_anari_vec3 camera_get_up() const = 0;
-	virtual float camera_get_fovy() const = 0;
-	virtual float camera_get_near() const = 0;
-	virtual float camera_get_far() const = 0;
+	virtual void camera_set(brx_anari_vec3 position, brx_anari_vec3 direction, brx_anari_vec3 up, float fovy, float near, float far) = 0;
 
 	virtual void frame_attach_window(void *wsi_window, float intermediate_width_scale, float intermediate_height_scale) = 0;
 	virtual void frame_resize_window(float intermediate_width_scale, float intermediate_height_scale) = 0;

@@ -18,21 +18,21 @@
 #include "brx_anari_pal_device.h"
 #include <cstring>
 
-void brx_anari_pal_device::set_quad_lights(uint32_t quad_light_count, BRX_ANARI_QUAD const *quad_lights)
+void brx_anari_pal_device::quad_light_set(uint32_t quad_light_count, BRX_ANARI_QUAD_LIGHT const *quad_lights)
 {
     this->m_quad_lights.resize(quad_light_count);
-    std::memcpy(this->m_quad_lights.data(), quad_lights, sizeof(BRX_ANARI_QUAD) * quad_light_count);
+    std::memcpy(this->m_quad_lights.data(), quad_lights, sizeof(BRX_ANARI_QUAD_LIGHT) * quad_light_count);
 }
 
 void brx_anari_pal_device::quad_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination)
 {
     uint32_t const quad_light_count = this->m_quad_lights.size();
     assert(quad_light_count <= NONE_UPDATE_MAX_AREA_LIGHTING_COUNT);
-    BRX_ANARI_QUAD const *const quad_lights = this->m_quad_lights.data();
+    BRX_ANARI_QUAD_LIGHT const *const quad_lights = this->m_quad_lights.data();
     none_update_set_uniform_buffer_destination->g_area_lighting_count = quad_light_count;
     for (uint32_t quad_light_index = 0U; quad_light_index < quad_light_count; ++quad_light_index)
     {
-        BRX_ANARI_QUAD const quad_light = quad_lights[quad_light_index];
+        BRX_ANARI_QUAD_LIGHT const quad_light = quad_lights[quad_light_index];
 
         none_update_set_uniform_buffer_destination->g_area_lightings[3U * quad_light_index + 0U] = DirectX::XMFLOAT4(quad_light.m_position.m_x, quad_light.m_position.m_y, quad_light.m_position.m_z, quad_light.m_radiance.m_x);
         none_update_set_uniform_buffer_destination->g_area_lightings[3U * quad_light_index + 1U] = DirectX::XMFLOAT4(quad_light.m_edge1.m_x, quad_light.m_edge1.m_y, quad_light.m_edge1.m_z, quad_light.m_radiance.m_y);
@@ -123,12 +123,7 @@ void brx_anari_pal_device::quad_light_render_emissive(uint32_t frame_throttling_
     }
 }
 
-void brx_anari_pal_device::set_quad_lights_enable_debug_renderer(bool quad_lights_enable_debug_renderer)
+void brx_anari_pal_device::quad_light_set_enable_debug_renderer(bool quad_lights_enable_debug_renderer)
 {
     this->m_quad_lights_enable_debug_renderer = quad_lights_enable_debug_renderer;
-}
-
-bool brx_anari_pal_device::get_quad_lights_enable_debug_renderer() const
-{
-    return this->m_quad_lights_enable_debug_renderer;
 }

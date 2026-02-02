@@ -431,21 +431,21 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         assert(NULL == this->m_voxel_cone_tracing_voxelization_render_pass);
         this->m_voxel_cone_tracing_voxelization_render_pass = this->m_device->create_render_pass(0U, NULL, NULL);
 
-        assert(NULL == this->m_voxel_cone_tracing_voxelization_pipeline);
+        assert(NULL == this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline);
 #if defined(__GNUC__)
 #if defined(__linux__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
-#include "../shaders/spirv/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_physically_based_rendering_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code), voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
 #elif defined(__MACH__)
         assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
         {
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
-#include "../shaders/spirv/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_physically_based_rendering_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code), voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
 #else
 #error Unknown Platform
@@ -456,15 +456,60 @@ void brx_anari_pal_device::voxel_cone_tracing_create_pipeline()
         case BRX_PAL_BACKEND_NAME_D3D12:
         {
 #include "../shaders/dxil/voxel_cone_tracing_voxelization_vertex.inl"
-#include "../shaders/dxil/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+#include "../shaders/dxil/voxel_cone_tracing_voxelization_physically_based_rendering_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code), voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
         break;
         case BRX_PAL_BACKEND_NAME_VK:
         {
 #include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
-#include "../shaders/spirv/voxel_cone_tracing_voxelization_fragment.inl"
-            this->m_voxel_cone_tracing_voxelization_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_fragment_shader_module_code), voxel_cone_tracing_voxelization_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_physically_based_rendering_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code), voxel_cone_tracing_voxelization_physically_based_rendering_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+        }
+        break;
+        default:
+        {
+            assert(false);
+        }
+        }
+#else
+#error Unknown Compiler
+#endif
+
+        assert(NULL == this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline);
+#if defined(__GNUC__)
+#if defined(__linux__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_toon_shading_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code), voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+        }
+#elif defined(__MACH__)
+        assert(BRX_PAL_BACKEND_NAME_VK == this->m_device->get_backend_name());
+        {
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_toon_shading_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code), voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+        }
+#else
+#error Unknown Platform
+#endif
+#elif defined(_MSC_VER)
+        switch (this->m_device->get_backend_name())
+        {
+        case BRX_PAL_BACKEND_NAME_D3D12:
+        {
+#include "../shaders/dxil/voxel_cone_tracing_voxelization_vertex.inl"
+#include "../shaders/dxil/voxel_cone_tracing_voxelization_toon_shading_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code), voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
+        }
+        break;
+        case BRX_PAL_BACKEND_NAME_VK:
+        {
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_vertex.inl"
+#include "../shaders/spirv/voxel_cone_tracing_voxelization_toon_shading_fragment.inl"
+            this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline = this->m_device->create_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_render_pass, this->m_surface_update_pipeline_layout, sizeof(voxel_cone_tracing_voxelization_vertex_shader_module_code), voxel_cone_tracing_voxelization_vertex_shader_module_code, sizeof(voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code), voxel_cone_tracing_voxelization_toon_shading_fragment_shader_module_code, false, true, true, 8U, BRX_PAL_GRAPHICS_PIPELINE_DEPTH_COMPARE_OPERATION_DISABLE, BRX_PAL_GRAPHICS_PIPELINE_BLEND_OPERATION_DISABLE);
         }
         break;
         default:
@@ -487,9 +532,13 @@ void brx_anari_pal_device::voxel_cone_tracing_destroy_pipeline()
     this->m_device->destroy_frame_buffer(this->m_voxel_cone_tracing_voxelization_frame_buffer);
     this->m_voxel_cone_tracing_voxelization_frame_buffer = NULL;
 
-    assert(NULL != this->m_voxel_cone_tracing_voxelization_pipeline);
-    this->m_device->destroy_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_pipeline);
-    this->m_voxel_cone_tracing_voxelization_pipeline = NULL;
+    assert(NULL != this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline);
+    this->m_device->destroy_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline);
+    this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline = NULL;
+
+    assert(NULL != this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline);
+    this->m_device->destroy_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline);
+    this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline = NULL;
 
     assert(NULL != this->m_voxel_cone_tracing_voxelization_render_pass);
     this->m_device->destroy_render_pass(this->m_voxel_cone_tracing_voxelization_render_pass);
@@ -674,7 +723,7 @@ DirectX::XMFLOAT4X4 brx_anari_pal_device::voxel_cone_tracing_get_clipmap_stack_l
     return brx_voxel_cone_tracing_voxelization_compute_clipmap_stack_level_projection_matrix(clipmap_stack_level_index);
 }
 
-void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_voxel_cone_tracing_dirty, BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality)
+void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_voxel_cone_tracing_dirty, BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality, BRX_ANARI_RENDERER_STYLE renderer_style)
 {
     if ((BRX_ANARI_RENDERER_GI_QUALITY_LOW == renderer_gi_quality) || (BRX_ANARI_RENDERER_GI_QUALITY_MEDIUM == renderer_gi_quality) || (BRX_ANARI_RENDERER_GI_QUALITY_HIGH == renderer_gi_quality))
     {
@@ -774,7 +823,23 @@ void brx_anari_pal_device::voxel_cone_tracing_render(uint32_t frame_throttling_i
 
             graphics_command_buffer->set_scissor(0, 0, static_cast<uint32_t>(BRX_VCT_CLIPMAP_MAP_SIZE), static_cast<uint32_t>(BRX_VCT_CLIPMAP_MAP_SIZE));
 
-            graphics_command_buffer->bind_graphics_pipeline(this->m_voxel_cone_tracing_voxelization_pipeline);
+            {
+                brx_pal_graphics_pipeline *voxel_cone_tracing_voxelization_pipeline;
+                switch (this->m_renderer_style)
+                {
+                case BRX_ANARI_RENDERER_STYLE_PHYSICALLY_BASED_RENDERING:
+                {
+                    voxel_cone_tracing_voxelization_pipeline = this->m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline;
+                }
+                break;
+                default:
+                {
+                    assert(BRX_ANARI_RENDERER_STYLE_TOON_SHADING == this->m_renderer_style);
+                    voxel_cone_tracing_voxelization_pipeline = this->m_voxel_cone_tracing_voxelization_toon_shading_pipeline;
+                }
+                }
+                graphics_command_buffer->bind_graphics_pipeline(voxel_cone_tracing_voxelization_pipeline);
+            }
 
             for (auto const &world_surface_group_instance : this->m_world_surface_group_instances)
             {

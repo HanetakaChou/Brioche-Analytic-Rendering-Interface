@@ -68,13 +68,13 @@ brx_pixel_shader_parameter_end(main)
         brx_float3 environment_map_omega = brx_mul(g_world_to_environment_map_transform, brx_float4(camera_ray_direction, 0.0)).xyz;
 
         brx_float3 environment_map_raw_radiance = brx_float3(0.0, 0.0, 0.0);
-#if (ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT_EQUIRECTANGULAR_MAP == ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT)
+#if defined(ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT) && (ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT_EQUIRECTANGULAR_MAP == ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT)
         {
             brx_float2 environment_map_uv = brx_equirectangular_map(environment_map_omega);
 
             environment_map_raw_radiance = brx_sample_2d(t_environment_map, s_wrap_sampler, environment_map_uv).rgb;
         }
-#elif (ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT_OCTAHEDRAL_MAP == ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT)
+#elif defined(ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT) && (ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT_OCTAHEDRAL_MAP == ENVIRONMENT_LIGHTING_SKYBOX_LAYOUT)
         {
             brx_float2 environment_map_ndc_flip_x = brx_octahedral_map(environment_map_omega);
 

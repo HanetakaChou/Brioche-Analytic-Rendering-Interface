@@ -36,6 +36,12 @@
     <ClCompile Include="..\source\brx_anari_pal_quad_light.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="..\source\brx_anari_pal_directional_light.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\brx_anari_pal_camera.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="BRX-ANARI.def">

@@ -51,6 +51,8 @@ brx_pixel_shader_parameter_end(main)
         ambient_occlusion = 1.0;
     }
 
+    brx_float3 color_radiance = direct_radiance + indirect_radiance + ambient_radiance * ambient_occlusion;
+
     // TODO: HDR swapchain
     //
     // DXGI_COLOR_SPACE_TYPE: https://learn.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range#setting-up-your-directx-swap-chain
@@ -66,7 +68,9 @@ brx_pixel_shader_parameter_end(main)
     // scRGB         | scRGB               | Bt709                | N/A                                                                         | VK_FORMAT_R16G16B16A16_SFLOAT      + VK_COLOR_SPACE_BT709_LINEAR_EXT
     // Linear BT2020 | Linear BT2020       | Bt2020               | DXGI_FORMAT_R16G16B16A16_FLOAT + DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709    | VK_FORMAT_R16G16B16A16_SFLOAT      + VK_COLOR_SPACE_BT2020_LINEAR_EXT
 
-    brx_float3 color_linear = direct_radiance + indirect_radiance + ambient_radiance * ambient_occlusion;
+    // Reinhard Tone Mapping
+    brx_float3 color_linear = color_radiance / (color_radiance + brx_float3(1.0, 1.0, 1.0));
+
     brx_float4 color_srgb = brx_float4(brx_pow(brx_clamp(color_linear, 0.0, 1.0), brx_float3(1.0 / 2.2, 1.0 / 2.2, 1.0 / 2.2)), 1.0);
 
     out_display_color = color_srgb;

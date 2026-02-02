@@ -29,28 +29,60 @@ brx_vertex_shader_parameter_out(brx_float4, out_vertex_tangent, 2) brx_vertex_sh
 brx_vertex_shader_parameter_out(brx_float2, out_vertex_texcoord, 3) 
 brx_vertex_shader_parameter_end(main)
 {
+    brx_uint triangle_index = (brx_uint(brx_vertex_index) / 3u);
+
     brx_uint buffer_texture_flags = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_AUXILIARY_BUFFER_INDEX], 0);
 
-    brx_uint vertex_index;
-    brx_branch
-    if(0u != (buffer_texture_flags & SURFACE_BUFFER_FLAG_UINT16_INDEX))
+    brx_uint3 triangle_vertex_indices;
+    brx_branch if (0u != (buffer_texture_flags & SURFACE_BUFFER_FLAG_UINT16_INDEX))
     {
-        brx_uint index_buffer_offset = (0u == ((SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(brx_vertex_index)) & 3u)) ? (SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(brx_vertex_index)) : ((SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(brx_vertex_index)) - 2u);
-        brx_uint packed_vector_index_buffer = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], index_buffer_offset);
-        brx_uint2 unpacked_vector_index_buffer = brx_R16G16_UINT_to_UINT2(packed_vector_index_buffer);
-        vertex_index = (0u == ((SURFACE_UINT16_INDEX_BUFFER_STRIDE * brx_uint(brx_vertex_index)) & 3u)) ? unpacked_vector_index_buffer.x : unpacked_vector_index_buffer.y;
+        brx_uint index_buffer_offset = (0u == (((SURFACE_UINT16_INDEX_BUFFER_STRIDE * 3u) * triangle_index) & 3u)) ? ((SURFACE_UINT16_INDEX_BUFFER_STRIDE * 3u) * triangle_index) : (((SURFACE_UINT16_INDEX_BUFFER_STRIDE * 3u) * triangle_index) - 2u);
+
+        brx_uint2 packed_vector_index_buffer = brx_byte_address_buffer_load2(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], index_buffer_offset);
+
+        brx_uint4 unpacked_vector_index_buffer = brx_R16G16B16A16_UINT_to_UINT4(packed_vector_index_buffer);
+
+        triangle_vertex_indices = (0u == (((SURFACE_UINT16_INDEX_BUFFER_STRIDE * 3u) * triangle_index) & 3u)) ? unpacked_vector_index_buffer.xyz : unpacked_vector_index_buffer.yzw;
     }
     else
     {
-        brx_uint index_buffer_offset = SURFACE_UINT32_INDEX_BUFFER_STRIDE * brx_uint(brx_vertex_index);
-        vertex_index = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], index_buffer_offset);
+        brx_uint index_buffer_offset = (SURFACE_UINT32_INDEX_BUFFER_STRIDE * 3u) * triangle_index;
+
+        triangle_vertex_indices = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX], index_buffer_offset);
     }
 
-    brx_float3 vertex_position_model_space;
+    brx_float3 triangle_vertices_position_model_space[3];
     {
-        brx_uint vertex_position_buffer_offset = SURFACE_VERTEX_POSITION_BUFFER_STRIDE * vertex_index;
-        brx_uint3 packed_vector_vertex_position_binding = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset);
-        vertex_position_model_space = brx_uint_as_float(packed_vector_vertex_position_binding);
+        brx_uint3 vertex_position_buffer_offset = SURFACE_VERTEX_POSITION_BUFFER_STRIDE * triangle_vertex_indices;
+
+        brx_uint3 packed_vector_vertices_position_binding[3];
+        packed_vector_vertices_position_binding[0] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset.x);
+        packed_vector_vertices_position_binding[1] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset.y);
+        packed_vector_vertices_position_binding[2] = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_INDEX], vertex_position_buffer_offset.z);
+
+        triangle_vertices_position_model_space[0] = brx_uint_as_float(packed_vector_vertices_position_binding[0]);
+        triangle_vertices_position_model_space[1] = brx_uint_as_float(packed_vector_vertices_position_binding[1]);
+        triangle_vertices_position_model_space[2] = brx_uint_as_float(packed_vector_vertices_position_binding[2]);
+    }
+
+    brx_float3 triangle_non_unit_normal_model_space = brx_cross(triangle_vertices_position_model_space[1] - triangle_vertices_position_model_space[0], triangle_vertices_position_model_space[2] - triangle_vertices_position_model_space[0]);
+
+    brx_uint triangle_vertex_index = (brx_uint(brx_vertex_index) % 3u);
+
+    brx_float3 vertex_position_model_space = triangle_vertices_position_model_space[triangle_vertex_index];
+
+    brx_uint vertex_index;
+    brx_branch if (0 == triangle_vertex_index)
+    {
+        vertex_index = triangle_vertex_indices.x;
+    }
+    else if (1 == triangle_vertex_index)
+    {
+        vertex_index = triangle_vertex_indices.y;
+    }
+    else
+    {
+        vertex_index = triangle_vertex_indices.z;
     }
 
     brx_float3 vertex_normal_model_space;
@@ -67,12 +99,19 @@ brx_vertex_shader_parameter_end(main)
         vertex_texcoord = brx_clamp(brx_unpack_half2(packed_vector_vertex_varying_binding.z), brx_float2(-65504.0, -65504.0), brx_float2(65504.0, 65504.0));
     }
 
+    // flip back side normal
+    brx_branch if (brx_dot(triangle_non_unit_normal_model_space, vertex_normal_model_space) < 0.0)
+    {
+        vertex_normal_model_space = -vertex_normal_model_space;
+        vertex_tangent_model_space = -vertex_tangent_model_space;
+    }
+
     brx_float3 vertex_position_world_space = brx_mul(g_model_transform, brx_float4(vertex_position_model_space, 1.0)).xyz;
     brx_float3 vertex_position_view_space = brx_mul(g_view_transform, brx_float4(vertex_position_world_space, 1.0)).xyz;
     brx_float4 vertex_position_clip_space = brx_mul(g_projection_transform, brx_float4(vertex_position_view_space, 1.0));
 
     brx_float3 vertex_normal_world_space = brx_mul(g_model_transform, brx_float4(vertex_normal_model_space, 0.0)).xyz;
-    
+
     brx_float4 vertex_tangent_world_space = brx_float4(brx_mul(g_model_transform, brx_float4(vertex_tangent_model_space.xyz, 0.0)).xyz, vertex_tangent_model_space.w);
 
     brx_position = vertex_position_clip_space;

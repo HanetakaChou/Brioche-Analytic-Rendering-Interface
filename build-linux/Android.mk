@@ -24,9 +24,11 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := BRX-ANARI
 
 LOCAL_SRC_FILES := \
+    $(LOCAL_PATH)/../source/brx_anari_pal_camera.cpp \
     $(LOCAL_PATH)/../source/brx_anari_pal_device.cpp \
     $(LOCAL_PATH)/../source/brx_anari_pal_hdri_light.cpp \
     $(LOCAL_PATH)/../source/brx_anari_pal_image.cpp \
+    $(LOCAL_PATH)/../source/brx_anari_pal_directional_light.cpp \
     $(LOCAL_PATH)/../source/brx_anari_pal_quad_light.cpp \
     $(LOCAL_PATH)/../source/brx_anari_pal_resource.cpp \
     $(LOCAL_PATH)/../source/brx_anari_pal_surface.cpp \

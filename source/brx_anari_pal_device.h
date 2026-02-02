@@ -84,7 +84,8 @@ class brx_anari_pal_device final : public brx_anari_device
 	brx_pal_render_pass *m_forward_shading_render_pass;
 	brx_pal_graphics_pipeline *m_environment_lighting_skybox_equirectangular_map_pipeline;
 	brx_pal_graphics_pipeline *m_environment_lighting_skybox_octahedral_map_pipeline;
-	brx_pal_graphics_pipeline *m_forward_shading_pipeline;
+	brx_pal_graphics_pipeline *m_forward_shading_physically_based_rendering_pipeline;
+	brx_pal_graphics_pipeline *m_forward_shading_toon_shading_pipeline;
 	// ---
 	BRX_PAL_COLOR_ATTACHMENT_IMAGE_FORMAT const m_display_color_image_format;
 	brx_pal_render_pass *m_post_processing_render_pass;
@@ -143,7 +144,11 @@ class brx_anari_pal_device final : public brx_anari_device
 
 	mcrt_unordered_map<brx_anari_surface_group const *, mcrt_set<brx_anari_surface_group_instance const *>> m_world_surface_group_instances;
 
-	mcrt_vector<BRX_ANARI_QUAD> m_quad_lights;
+	bool m_directional_light_visible;
+	brx_anari_vec3 m_directional_light_irradiance;
+	brx_anari_vec3 m_directional_light_direction;
+
+	mcrt_vector<BRX_ANARI_QUAD_LIGHT> m_quad_lights;
 	brx_pal_graphics_pipeline *m_area_lighting_emissive_pipeline;
 	bool m_quad_lights_enable_debug_renderer;
 
@@ -179,7 +184,8 @@ class brx_anari_pal_device final : public brx_anari_device
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_zero_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_clear_pipeline;
 	brx_pal_render_pass *m_voxel_cone_tracing_voxelization_render_pass;
-	brx_pal_graphics_pipeline *m_voxel_cone_tracing_voxelization_pipeline;
+	brx_pal_graphics_pipeline *m_voxel_cone_tracing_voxelization_physically_based_rendering_pipeline;
+	brx_pal_graphics_pipeline *m_voxel_cone_tracing_voxelization_toon_shading_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_low_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_medium_pipeline;
 	brx_pal_compute_pipeline *m_voxel_cone_tracing_cone_tracing_high_pipeline;
@@ -189,6 +195,8 @@ class brx_anari_pal_device final : public brx_anari_device
 	bool m_renderer_gi_quality_lock;
 #endif
 	BRX_ANARI_RENDERER_GI_QUALITY m_renderer_gi_quality;
+
+	BRX_ANARI_RENDERER_STYLE m_renderer_style;
 
 public:
 	brx_anari_pal_device();
@@ -255,9 +263,10 @@ private:
 	brx_anari_surface_group_instance *world_new_surface_group_instance(brx_anari_surface_group *surface_group) override;
 	void world_release_surface_group_instance(brx_anari_surface_group_instance *surface_group_instance) override;
 
-	void set_quad_lights(uint32_t quad_light_count, BRX_ANARI_QUAD const *quad_lights) override;
-	void set_quad_lights_enable_debug_renderer(bool quad_lights_enable_debug_renderer) override;
-	bool get_quad_lights_enable_debug_renderer() const override;
+	void directional_light_set(bool visible, brx_anari_vec3 irradiance, brx_anari_vec3 direction) override;
+
+	void quad_light_set(uint32_t quad_light_count, BRX_ANARI_QUAD_LIGHT const *quad_lights) override;
+	void quad_light_set_enable_debug_renderer(bool quad_lights_enable_debug_renderer) override;
 
 	void hdri_light_set_radiance(brx_anari_image *radiance) override;
 	void hdri_light_set_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT layout) override;
@@ -272,19 +281,9 @@ private:
 	void renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY gi_quality) override;
 	BRX_ANARI_RENDERER_GI_QUALITY renderer_get_gi_quality() const override;
 
-	void camera_set_position(brx_anari_vec3 position) override;
-	void camera_set_direction(brx_anari_vec3 direction) override;
-	void camera_set_up(brx_anari_vec3 up) override;
-	void camera_set_fovy(float fovy) override;
-	void camera_set_near(float near) override;
-	void camera_set_far(float far) override;
+	void renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style) override;
 
-	brx_anari_vec3 camera_get_position() const override;
-	brx_anari_vec3 camera_get_direction() const override;
-	brx_anari_vec3 camera_get_up() const override;
-	float camera_get_fovy() const override;
-	float camera_get_near() const override;
-	float camera_get_far() const override;
+	void camera_set(brx_anari_vec3 position, brx_anari_vec3 direction, brx_anari_vec3 up, float fovy, float near, float far) override;
 
 	void frame_attach_window(void *wsi_window, float intermediate_width_scale, float intermediate_height_scale) override;
 	void frame_resize_window(float intermediate_width_scale, float intermediate_height_scale) override;
@@ -296,6 +295,10 @@ private:
 	inline void destroy_swap_chain_compatible_render_pass_and_pipeline();
 	inline void attach_swap_chain(BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
 	inline void detach_swap_chain(BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
+
+	void camera_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination);
+
+	void directional_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination);
 
 	void quad_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination);
 	void quad_light_create_pipeline();
@@ -323,7 +326,7 @@ private:
 	DirectX::XMFLOAT3 voxel_cone_tracing_get_clipmap_center(DirectX::XMFLOAT3 const &in_clipmap_anchor);
 	DirectX::XMFLOAT4X4 voxel_cone_tracing_get_viewport_depth_direction_view_matrix(DirectX::XMFLOAT3 const &in_clipmap_center, uint32_t viewport_depth_direction_index);
 	DirectX::XMFLOAT4X4 voxel_cone_tracing_get_clipmap_stack_level_projection_matrix(uint32_t clipmap_stack_level_index);
-	void voxel_cone_tracing_render(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_voxel_cone_tracing_dirty, BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality);
+	void voxel_cone_tracing_render(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_voxel_cone_tracing_dirty, BRX_ANARI_RENDERER_GI_QUALITY renderer_gi_quality, BRX_ANARI_RENDERER_STYLE renderer_style);
 };
 
 class brx_anari_pal_image final : public brx_anari_image

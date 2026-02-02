@@ -175,7 +175,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\source\brx_anari_pal_camera.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_device.cpp" />
+    <ClCompile Include="..\source\brx_anari_pal_directional_light.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_hdri_light.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_image.cpp" />
     <ClCompile Include="..\source\brx_anari_pal_quad_light.cpp" />

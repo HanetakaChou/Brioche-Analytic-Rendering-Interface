@@ -30,11 +30,12 @@
 brx_cbuffer(surface_group_update_set_uniform_buffer_binding, 1, 0)
 {
     brx_column_major brx_float4x4 g_model_transform;
+    brx_column_major brx_float4x4 g_inverse_model_transform;
 };
 
-brx_read_only_byte_address_buffer_table(t_surface_buffers, 2, 0, 4);
+brx_read_only_byte_address_buffer_table(t_surface_buffers, 2, 0, 5);
 
-brx_texture_2d_table(t_surface_images, 2, 4, 4);
+brx_texture_2d_table(t_surface_images, 2, 5, 4);
 
 #define forward_shading_root_signature_macro                                                            \
     brx_root_signature_root_parameter_begin(forward_shading_root_signature_name)                        \
@@ -64,8 +65,8 @@ brx_texture_2d_table(t_surface_images, 2, 4, 4);
     brx_root_signature_root_descriptor_table_srv(0, 23, 1) brx_root_signature_root_parameter_split      \
     brx_root_signature_root_descriptor_table_srv(0, 24, 1) brx_root_signature_root_parameter_split      \
     brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
-    brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
-    brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \
+    brx_root_signature_root_descriptor_table_srv(2, 0, 5) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(2, 5, 4)                                               \
     brx_root_signature_root_parameter_end
 
 #define brx_voxel_cone_tracing_voxelization_root_signature_macro                                        \
@@ -96,8 +97,8 @@ brx_texture_2d_table(t_surface_images, 2, 4, 4);
     brx_root_signature_root_descriptor_table_srv(0, 23, 1) brx_root_signature_root_parameter_split      \
     brx_root_signature_root_descriptor_table_srv(0, 24, 1) brx_root_signature_root_parameter_split      \
     brx_root_signature_root_cbv(1, 0) brx_root_signature_root_parameter_split                           \
-    brx_root_signature_root_descriptor_table_srv(2, 0, 4) brx_root_signature_root_parameter_split       \
-    brx_root_signature_root_descriptor_table_srv(2, 4, 4)                                               \
+    brx_root_signature_root_descriptor_table_srv(2, 0, 5) brx_root_signature_root_parameter_split       \
+    brx_root_signature_root_descriptor_table_srv(2, 5, 4)                                               \
     brx_root_signature_root_parameter_end
 
 #endif

@@ -164,6 +164,7 @@ class brx_anari_pal_device final : public brx_anari_device
 #endif
 	bool m_hdri_light_dirty;
 	brx_pal_storage_intermediate_buffer *m_hdri_light_environment_map_sh_coefficients;
+	bool m_hdri_light_enable_skybox_renderer;
 
 	brx_anari_vec3 m_camera_position;
 	brx_anari_vec3 m_camera_direction;
@@ -196,7 +197,18 @@ class brx_anari_pal_device final : public brx_anari_device
 #endif
 	BRX_ANARI_RENDERER_GI_QUALITY m_renderer_gi_quality;
 
+	brx_anari_vec3 m_renderer_background;
 	BRX_ANARI_RENDERER_STYLE m_renderer_style;
+	float m_renderer_toon_shading_first_shade_color_step;
+	float m_renderer_toon_shading_first_shade_color_feather;
+	float m_renderer_toon_shading_second_shade_color_step;
+	float m_renderer_toon_shading_second_shade_color_feather;
+	float m_renderer_toon_shading_base_color;
+	float m_renderer_toon_shading_first_shade_color;
+	float m_renderer_toon_shading_second_shade_color;
+	float m_renderer_toon_shading_high_color_power;
+	float m_renderer_toon_shading_rim_light_power;
+	float m_renderer_toon_shading_rim_light_inside_mask;
 
 public:
 	brx_anari_pal_device();
@@ -222,7 +234,7 @@ public:
 
 	inline brx_pal_uniform_upload_buffer *create_surface_group_update_set_uniform_buffer();
 	inline brx_pal_descriptor_set *create_surface_group_update_descriptor_set(brx_pal_uniform_upload_buffer const *const uniform_buffer);
-	inline brx_pal_descriptor_set *create_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image);
+	inline brx_pal_descriptor_set *create_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_read_only_storage_buffer const *const vertex_position_non_deformed_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image);
 
 	void release_image(brx_anari_pal_image *const image);
 	void release_surface_group(brx_anari_pal_surface_group *const surface_group);
@@ -278,10 +290,12 @@ private:
 	brx_anari_vec3 hdri_light_get_direction() const override;
 	brx_anari_vec3 hdri_light_get_up() const override;
 
+	void hdri_light_set_enable_skybox_renderer(bool hdri_light_enable_skybox_renderer) override;
+
 	void renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY gi_quality) override;
 	BRX_ANARI_RENDERER_GI_QUALITY renderer_get_gi_quality() const override;
 
-	void renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style) override;
+	void renderer_set(brx_anari_vec3 background, BRX_ANARI_RENDERER_STYLE renderer_style, float toon_shading_first_shade_color_step, float toon_shading_first_shade_color_feather, float toon_shading_second_shade_color_step, float toon_shading_second_shade_color_feather, float toon_shading_base_color, float toon_shading_first_shade_color, float toon_shading_second_shade_color, float toon_shading_high_color_power, float toon_shading_rim_light_power, float toon_shading_rim_light_inside_mask) override;
 
 	void camera_set(brx_anari_vec3 position, brx_anari_vec3 direction, brx_anari_vec3 up, float fovy, float near, float far) override;
 
@@ -373,7 +387,7 @@ class brx_anari_pal_surface
 public:
 	inline brx_anari_pal_surface();
 	inline ~brx_anari_pal_surface();
-	inline void init(brx_anari_pal_device *device, BRX_ANARI_SURFACE const *surface);
+	inline void init(brx_anari_pal_device *device, BRX_ANARI_SURFACE const *surface, bool material_face);
 	inline void uninit(brx_anari_pal_device *device);
 	uint32_t get_vertex_count() const;
 	inline brx_pal_storage_asset_buffer const *get_vertex_position_buffer() const;

@@ -15,6 +15,16 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+#ifndef _FORWARD_SHADING_VERTEX_BSLI_
+#define _FORWARD_SHADING_VERTEX_BSLI_ 1
+
+#define FORWARD_SHADING_RENDER_STYLE_PHYSICALLY_BASED_RENDERING 1
+#define FORWARD_SHADING_RENDER_STYLE_TOON_SHADING 2
+
+#ifndef FORWARD_SHADING_RENDER_STYLE
+#error "physically based rendering or toon shading"
+#endif
+
 #include "surface_resource_binding.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
@@ -26,7 +36,8 @@ brx_vertex_shader_parameter_out_position brx_vertex_shader_parameter_split
 brx_vertex_shader_parameter_out(brx_float3, out_vertex_position_world_space, 0) brx_vertex_shader_parameter_split
 brx_vertex_shader_parameter_out(brx_float3, out_vertex_normal, 1) brx_vertex_shader_parameter_split
 brx_vertex_shader_parameter_out(brx_float4, out_vertex_tangent, 2) brx_vertex_shader_parameter_split
-brx_vertex_shader_parameter_out(brx_float2, out_vertex_texcoord, 3) 
+brx_vertex_shader_parameter_out(brx_float2, out_vertex_texcoord, 3) brx_vertex_shader_parameter_split
+brx_vertex_shader_parameter_out(brx_float3, out_vertex_position_non_deformed_model_space, 4) 
 brx_vertex_shader_parameter_end(main)
 {
     brx_uint triangle_index = (brx_uint(brx_vertex_index) / 3u);
@@ -64,6 +75,8 @@ brx_vertex_shader_parameter_end(main)
         triangle_vertices_position_model_space[1] = brx_uint_as_float(packed_vector_vertices_position_binding[1]);
         triangle_vertices_position_model_space[2] = brx_uint_as_float(packed_vector_vertices_position_binding[2]);
     }
+
+    brx_bool surface_material_face = (0u != (buffer_texture_flags & SURFACE_MATERIAL_FLAG_FACE));
 
     brx_float3 triangle_non_unit_normal_model_space = brx_cross(triangle_vertices_position_model_space[1] - triangle_vertices_position_model_space[0], triangle_vertices_position_model_space[2] - triangle_vertices_position_model_space[0]);
 
@@ -114,9 +127,32 @@ brx_vertex_shader_parameter_end(main)
 
     brx_float4 vertex_tangent_world_space = brx_float4(brx_mul(g_model_transform, brx_float4(vertex_tangent_model_space.xyz, 0.0)).xyz, vertex_tangent_model_space.w);
 
+    brx_float3 vertex_position_non_deformed_model_space;
+    {
+#if defined(FORWARD_SHADING_RENDER_STYLE) && (FORWARD_SHADING_RENDER_STYLE_PHYSICALLY_BASED_RENDERING == FORWARD_SHADING_RENDER_STYLE)
+        vertex_position_non_deformed_model_space = brx_float3(0.0, 0.0, 0.0);
+#elif defined(FORWARD_SHADING_RENDER_STYLE) && (FORWARD_SHADING_RENDER_STYLE_TOON_SHADING == FORWARD_SHADING_RENDER_STYLE)
+        brx_branch if (surface_material_face)
+        {
+            brx_uint vertex_position_non_deformed_buffer_offset = SURFACE_VERTEX_POSITION_BUFFER_STRIDE * vertex_index;
+            brx_uint3 packed_vector_vertices_position_non_deformed_binding = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_NON_DEFORMED_INDEX], vertex_position_non_deformed_buffer_offset);
+            vertex_position_non_deformed_model_space = brx_uint_as_float(packed_vector_vertices_position_non_deformed_binding);
+        }
+        else
+        {
+            vertex_position_non_deformed_model_space = brx_float3(0.0, 0.0, 0.0);
+        }
+#else
+#error Unknown Render Style
+#endif
+    }
+
     brx_position = vertex_position_clip_space;
     out_vertex_position_world_space = vertex_position_world_space;
     out_vertex_normal = vertex_normal_world_space;
     out_vertex_tangent = vertex_tangent_world_space;
     out_vertex_texcoord = vertex_texcoord;
+    out_vertex_position_non_deformed_model_space = vertex_position_non_deformed_model_space;
 }
+
+#endif

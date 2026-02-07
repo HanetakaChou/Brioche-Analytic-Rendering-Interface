@@ -180,7 +180,7 @@ inline brx_pal_descriptor_set *brx_anari_pal_device::create_surface_group_update
     return descriptor_set;
 }
 
-inline brx_pal_descriptor_set *brx_anari_pal_device::create_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image)
+inline brx_pal_descriptor_set *brx_anari_pal_device::create_surface_update_descriptor_set(brx_pal_read_only_storage_buffer const *const vertex_position_buffer, brx_pal_read_only_storage_buffer const *const vertex_varying_buffer, brx_pal_read_only_storage_buffer const *const index_buffer, brx_pal_read_only_storage_buffer const *const auxiliary_buffer, brx_pal_read_only_storage_buffer const *const vertex_position_non_deformed_buffer, brx_pal_sampled_image const *const emissive_image, brx_pal_sampled_image const *const normal_image, brx_pal_sampled_image const *const base_color_image, brx_pal_sampled_image const *const metallic_roughness_image)
 {
     brx_pal_descriptor_set *descriptor_set = this->m_device->create_descriptor_set(this->m_surface_update_descriptor_set_layout, 0U);
 
@@ -194,6 +194,7 @@ inline brx_pal_descriptor_set *brx_anari_pal_device::create_surface_update_descr
     surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_VARYING_BUFFER_INDEX] = vertex_varying_buffer;
     surface_buffers[FORWARD_SHADING_SURFACE_INDEX_BUFFER_INDEX] = index_buffer;
     surface_buffers[FORWARD_SHADING_SURFACE_AUXILIARY_BUFFER_INDEX] = auxiliary_buffer;
+    surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_NON_DEFORMED_INDEX] = vertex_position_non_deformed_buffer;
     this->m_device->write_descriptor_set(descriptor_set, 0U, BRX_PAL_DESCRIPTOR_TYPE_READ_ONLY_STORAGE_BUFFER, 0U, FORWARD_SHADING_SURFACE_BUFFER_COUNT, NULL, NULL, surface_buffers, NULL, NULL, NULL, NULL, NULL);
 
     brx_pal_sampled_image const *surface_images[FORWARD_SHADING_SURFACE_TEXTURE_COUNT];
@@ -295,7 +296,7 @@ inline brx_anari_pal_surface::~brx_anari_pal_surface()
     assert(NULL == this->m_surface_update_descriptor_set);
 }
 
-inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_SURFACE const *surface)
+inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_SURFACE const *surface, bool material_face)
 {
     assert(0U == this->m_vertex_count);
     this->m_vertex_count = surface->m_vertex_count;
@@ -457,6 +458,11 @@ inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_
     }
 
     uint32_t surface_auxiliary_buffer_texture_flags = 0U;
+
+    if (material_face)
+    {
+        surface_auxiliary_buffer_texture_flags |= SURFACE_MATERIAL_FLAG_FACE;
+    }
 
     // TODO: we may merge the mesh sections if the only difference of the materials is whether "double sided" is enabled
 
@@ -689,7 +695,9 @@ inline void brx_anari_pal_surface::init(brx_anari_pal_device *device, BRX_ANARI_
             assert(NULL != this->m_vertex_varying_buffer);
             assert(NULL != this->m_index_buffer);
             assert(NULL != this->m_auxiliary_buffer);
-            this->m_surface_update_descriptor_set = device->create_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), this->m_index_buffer->get_read_only_storage_buffer(), this->m_auxiliary_buffer->get_read_only_storage_buffer(), (NULL != this->m_emissive_image) ? this->m_emissive_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_normal_image) ? this->m_normal_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_base_color_image) ? this->m_base_color_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_metallic_roughness_image) ? this->m_metallic_roughness_image->get_image()->get_sampled_image() : NULL);
+            // TODO: actually we never use the non-deformed position for static surface
+            // shall we use the place holder buffer?
+            this->m_surface_update_descriptor_set = device->create_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), this->m_index_buffer->get_read_only_storage_buffer(), this->m_auxiliary_buffer->get_read_only_storage_buffer(), this->m_vertex_position_buffer->get_read_only_storage_buffer(), (NULL != this->m_emissive_image) ? this->m_emissive_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_normal_image) ? this->m_normal_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_base_color_image) ? this->m_base_color_image->get_image()->get_sampled_image() : NULL, (NULL != this->m_metallic_roughness_image) ? this->m_metallic_roughness_image->get_image()->get_sampled_image() : NULL);
         }
     }
 }
@@ -922,11 +930,81 @@ inline void brx_anari_pal_surface_group::init(brx_anari_pal_device *device, uint
     assert(0U == this->m_ref_count);
     this->m_ref_count = 1U;
 
+    mcrt_vector<bool> materials_face(static_cast<size_t>(surface_count), false);
+    {
+        mcrt_set<brx_anari_image *> materials_base_color_image;
+
+        for (uint32_t surface_index = 0U; surface_index < surface_count; ++surface_index)
+        {
+            BRX_ANARI_SURFACE const *const surface = surfaces + surface_index;
+
+            bool morph_target = false;
+            for (uint32_t morph_target_name_index = 0U; morph_target_name_index < BRX_ANARI_MORPH_TARGET_NAME_MMD_COUNT; ++morph_target_name_index)
+            {
+                brx_anari_surface_vertex_position const *const morph_target_vertex_positions = surface->m_morph_targets_vertex_positions[morph_target_name_index];
+                brx_anari_surface_vertex_varying const *const morph_target_vertex_varyings = surface->m_morph_targets_vertex_varyings[morph_target_name_index];
+                if ((NULL != morph_target_vertex_positions) && (NULL != morph_target_vertex_varyings))
+                {
+                    morph_target = true;
+                    break;
+                }
+                else
+                {
+                    assert(NULL == morph_target_vertex_positions);
+                    assert(NULL == morph_target_vertex_varyings);
+                }
+            }
+
+            if (morph_target)
+            {
+                assert(!materials_face[surface_index]);
+                materials_face[surface_index] = true;
+
+                if (NULL != surface->m_base_color_image)
+                {
+                    materials_base_color_image.insert(surface->m_base_color_image);
+                }
+                else
+                {
+                    assert(false);
+                }
+            }
+            else
+            {
+                assert(!materials_face[surface_index]);
+            }
+        }
+
+        for (uint32_t surface_index = 0U; surface_index < surface_count; ++surface_index)
+        {
+            BRX_ANARI_SURFACE const *const surface = surfaces + surface_index;
+
+            if ((!materials_face[surface_index]))
+            {
+                if (materials_base_color_image.end() != materials_base_color_image.find(surface->m_base_color_image))
+                {
+                    assert(NULL != surface->m_base_color_image);
+                    assert(!materials_face[surface_index]);
+                    materials_face[surface_index] = true;
+                }
+                else
+                {
+                    assert(!materials_face[surface_index]);
+                }
+            }
+            else
+            {
+                assert(NULL != surface->m_base_color_image);
+                assert(materials_base_color_image.end() != materials_base_color_image.find(surface->m_base_color_image));
+            }
+        }
+    }
+
     assert(this->m_surfaces.empty());
     this->m_surfaces.resize(surface_count);
     for (uint32_t surface_index = 0U; surface_index < surface_count; ++surface_index)
     {
-        this->m_surfaces[surface_index].init(device, surfaces + surface_index);
+        this->m_surfaces[surface_index].init(device, surfaces + surface_index, materials_face[surface_index]);
     }
 }
 
@@ -1016,7 +1094,7 @@ inline void brx_anari_pal_surface_instance::init(brx_anari_pal_device *device, b
         assert(NULL != this->m_vertex_varying_buffer);
         assert(NULL != surface->get_index_buffer());
         assert(NULL != surface->get_auxiliary_buffer());
-        this->m_surface_update_descriptor_set = device->create_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), surface->get_index_buffer()->get_read_only_storage_buffer(), surface->get_auxiliary_buffer()->get_read_only_storage_buffer(), (NULL != surface->get_emissive_image()) ? surface->get_emissive_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_normal_image()) ? surface->get_normal_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_base_color_image()) ? surface->get_base_color_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_metallic_roughness_image()) ? surface->get_metallic_roughness_image()->get_image()->get_sampled_image() : NULL);
+        this->m_surface_update_descriptor_set = device->create_surface_update_descriptor_set(this->m_vertex_position_buffer->get_read_only_storage_buffer(), this->m_vertex_varying_buffer->get_read_only_storage_buffer(), surface->get_index_buffer()->get_read_only_storage_buffer(), surface->get_auxiliary_buffer()->get_read_only_storage_buffer(), surface->get_vertex_position_buffer()->get_read_only_storage_buffer(), (NULL != surface->get_emissive_image()) ? surface->get_emissive_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_normal_image()) ? surface->get_normal_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_base_color_image()) ? surface->get_base_color_image()->get_image()->get_sampled_image() : NULL, (NULL != surface->get_metallic_roughness_image()) ? surface->get_metallic_roughness_image()->get_image()->get_sampled_image() : NULL);
     }
     else
     {

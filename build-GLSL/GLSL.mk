@@ -128,12 +128,14 @@ all : \
 	$(SPIRV_DIR)/_internal_environment_lighting_skybox_vertex.inl \
 	$(SPIRV_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.inl \
 	$(SPIRV_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl \
-	$(SPIRV_DIR)/_internal_forward_shading_vertex.inl \
+	$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.inl \
+	$(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.inl \
 	$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_fragment.inl \
 	$(SPIRV_DIR)/_internal_forward_shading_toon_shading_fragment.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_zero_compute.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.inl \
-	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl \
+	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.inl \
+	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_fragment.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_fragment.inl \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.inl \
@@ -187,9 +189,13 @@ $(SPIRV_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl $
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
 	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=frag $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.d" -o "$(SPIRV_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl" "$(SHADERS_DIR)/environment_lighting_skybox_octahedral_map_fragment.bsl"
 
-$(SPIRV_DIR)/_internal_forward_shading_vertex.inl $(SPIRV_DIR)/_internal_forward_shading_vertex.d : $(SHADERS_DIR)/forward_shading_vertex.bsl
+$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.inl $(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.d : $(SHADERS_DIR)/forward_shading_physically_based_rendering_vertex.bsl
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
-	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=vert $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_forward_shading_vertex.d" -o "$(SPIRV_DIR)/_internal_forward_shading_vertex.inl" "$(SHADERS_DIR)/forward_shading_vertex.bsl"
+	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=vert $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.d" -o "$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.inl" "$(SHADERS_DIR)/forward_shading_physically_based_rendering_vertex.bsl"
+
+$(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.inl $(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.d : $(SHADERS_DIR)/forward_shading_toon_shading_vertex.bsl
+	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
+	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=vert $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.d" -o "$(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.inl" "$(SHADERS_DIR)/forward_shading_toon_shading_vertex.bsl"
 
 $(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_fragment.inl $(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_fragment.d : $(SHADERS_DIR)/forward_shading_physically_based_rendering_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
@@ -207,9 +213,13 @@ $(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.inl $(SPIRV_DIR)/_intern
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
 	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=comp $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.d" -o "$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.inl" "$(SHADERS_DIR)/voxel_cone_tracing_clear_compute.bsl"
 
-$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl $(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d : $(SHADERS_DIR)/voxel_cone_tracing_voxelization_vertex.bsl
+$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.inl $(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.d : $(SHADERS_DIR)/voxel_cone_tracing_voxelization_physically_based_rendering_vertex.bsl
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
-	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=vert $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d" -o "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_vertex.bsl"
+	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=vert $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.d" -o "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_physically_based_rendering_vertex.bsl"
+
+$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.inl $(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.d : $(SHADERS_DIR)/voxel_cone_tracing_voxelization_toon_shading_vertex.bsl
+	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
+	$(HIDE) "$(GLSL_COMPILER_PATH)" -std=460core --target-env=vulkan1.0 -mfmt=num -fshader-stage=vert $(GLSL_COMPILER_FLAGS) -MD -MF "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.d" -o "$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.inl" "$(SHADERS_DIR)/voxel_cone_tracing_voxelization_toon_shading_vertex.bsl"
 
 $(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_fragment.inl $(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_fragment.d : $(SHADERS_DIR)/voxel_cone_tracing_voxelization_physically_based_rendering_fragment.bsl
 	$(HIDE) $(call host-mkdir,$(SPIRV_DIR))
@@ -255,12 +265,14 @@ $(SPIRV_DIR)/_internal_post_processing_fragment.inl $(SPIRV_DIR)/_internal_post_
 	$(SPIRV_DIR)/_internal_environment_lighting_skybox_vertex.d \
 	$(SPIRV_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.d \
 	$(SPIRV_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.d \
-	$(SPIRV_DIR)/_internal_forward_shading_vertex.d \
+	$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.d \
+	$(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.d \
 	$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_fragment.d \
 	$(SPIRV_DIR)/_internal_forward_shading_toon_shading_fragment.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_zero_compute.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.d \
-	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d \
+	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.d \
+	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_fragment.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_fragment.d \
 	$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.d \
@@ -282,12 +294,14 @@ clean:
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_skybox_vertex.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.inl)
-	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_vertex.inl)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.inl)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_fragment.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_toon_shading_fragment.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_zero_compute.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.inl)
-	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.inl)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.inl)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_fragment.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_fragment.inl)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.inl)
@@ -307,12 +321,14 @@ clean:
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_skybox_vertex.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_skybox_equirectangular_map_fragment.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_environment_lighting_skybox_octahedral_map_fragment.d)
-	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_vertex.d)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_vertex.d)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_toon_shading_vertex.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_physically_based_rendering_fragment.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_forward_shading_toon_shading_fragment.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_zero_compute.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_clear_compute.d)
-	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_vertex.d)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_vertex.d)
+	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_vertex.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_physically_based_rendering_fragment.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_voxelization_toon_shading_fragment.d)
 	$(HIDE) $(call host-rm,$(SPIRV_DIR)/_internal_voxel_cone_tracing_pack_compute.d)

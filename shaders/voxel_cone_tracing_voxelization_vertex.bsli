@@ -15,6 +15,16 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+#ifndef _VOXEL_CONE_TRACING_VOXELIZATION_VERTEX_BSLI_
+#define _VOXEL_CONE_TRACING_VOXELIZATION_VERTEX_BSLI_ 1
+
+#define VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_PHYSICALLY_BASED_RENDERING 1
+#define VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_TOON_SHADING 2
+
+#ifndef VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE
+#error "physically based rendering or toon shading"
+#endif
+
 #include "surface_resource_binding.bsli"
 #include "../../Voxel-Cone-Tracing/shaders/brx_voxel_cone_tracing_voxelization_vertex.bsli"
 
@@ -22,7 +32,7 @@
 #include "../../Brioche-Shader-Language/shaders/brx_packed_vector.bsli"
 #include "../../Brioche-Shader-Language/shaders/brx_octahedral_mapping.bsli"
 
-void brx_vct_application_bridge_get_triangle_vertices(in brx_uint in_triangle_index, out brx_uint3 out_triangle_vertex_indices, out brx_float3 out_triangle_vertices_position_model_space[3], out brx_float3 out_triangle_vertices_position_world_space[3])
+void brx_vct_application_bridge_get_triangle_vertices(in brx_uint in_triangle_index, out brx_uint3 out_triangle_vertex_indices, out brx_float3 out_triangle_vertices_position_model_space[3], out brx_float3 out_triangle_vertices_position_world_space[3], out brx_bool out_surface_material_face)
 {
     brx_uint buffer_texture_flags = brx_byte_address_buffer_load(t_surface_buffers[FORWARD_SHADING_SURFACE_AUXILIARY_BUFFER_INDEX], 0);
 
@@ -74,9 +84,11 @@ void brx_vct_application_bridge_get_triangle_vertices(in brx_uint in_triangle_in
     out_triangle_vertices_position_world_space[0] = triangle_vertices_position_world_space[0];
     out_triangle_vertices_position_world_space[1] = triangle_vertices_position_world_space[1];
     out_triangle_vertices_position_world_space[2] = triangle_vertices_position_world_space[2];
+
+    out_surface_material_face = (0u != (buffer_texture_flags & SURFACE_MATERIAL_FLAG_FACE));
 }
 
-void brx_vct_application_bridge_get_vertex(in brx_uint in_triangle_vertex_index, in brx_uint3 in_triangle_vertex_indices, in brx_float3 in_triangle_vertices_position_model_space[3], in brx_float3 in_triangle_vertices_position_world_space[3], out brx_float3 out_vertex_normal_world_space, out brx_float4 out_vertex_tangent_world_space, out brx_float2 out_vertex_texcoord)
+void brx_vct_application_bridge_get_vertex(in brx_uint in_triangle_vertex_index, in brx_uint3 in_triangle_vertex_indices, in brx_float3 in_triangle_vertices_position_model_space[3], in brx_float3 in_triangle_vertices_position_world_space[3], in brx_bool in_surface_material_face, out brx_float3 out_vertex_normal_world_space, out brx_float4 out_vertex_tangent_world_space, out brx_float2 out_vertex_texcoord, out brx_float3 out_vertex_position_non_deformed_model_space)
 {
     brx_float3 triangle_non_unit_normal_model_space = brx_cross(in_triangle_vertices_position_model_space[1] - in_triangle_vertices_position_model_space[0], in_triangle_vertices_position_model_space[2] - in_triangle_vertices_position_model_space[0]);
 
@@ -115,9 +127,30 @@ void brx_vct_application_bridge_get_vertex(in brx_uint in_triangle_vertex_index,
         vertex_tangent_model_space = -vertex_tangent_model_space;
     }
 
+    brx_float3 vertex_position_non_deformed_model_space;
+    {
+#if defined(VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE) && (VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_PHYSICALLY_BASED_RENDERING == VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE)
+        vertex_position_non_deformed_model_space = brx_float3(0.0, 0.0, 0.0);
+#elif defined(VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE) && (VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_TOON_SHADING == VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE)
+        brx_branch if (in_surface_material_face)
+        {
+            brx_uint vertex_position_non_deformed_buffer_offset = SURFACE_VERTEX_POSITION_BUFFER_STRIDE * vertex_index;
+            brx_uint3 packed_vector_vertices_position_non_deformed_binding = brx_byte_address_buffer_load3(t_surface_buffers[FORWARD_SHADING_SURFACE_VERTEX_POSITION_BUFFER_NON_DEFORMED_INDEX], vertex_position_non_deformed_buffer_offset);
+            vertex_position_non_deformed_model_space = brx_uint_as_float(packed_vector_vertices_position_non_deformed_binding);
+        }
+        else
+        {
+            vertex_position_non_deformed_model_space = brx_float3(0.0, 0.0, 0.0);
+        }
+#else
+#error Unknown Render Style
+#endif
+    }
+
     out_vertex_normal_world_space = brx_mul(g_model_transform, brx_float4(vertex_normal_model_space, 0.0)).xyz;
     out_vertex_tangent_world_space = brx_float4(brx_mul(g_model_transform, brx_float4(vertex_tangent_model_space.xyz, 0.0)).xyz, vertex_tangent_model_space.w);
     out_vertex_texcoord = vertex_texcoord;
+    out_vertex_position_non_deformed_model_space = vertex_position_non_deformed_model_space;
 }
 
 brx_float4x4 brx_vct_application_bridge_get_viewport_depth_direction_view_matrix(in brx_int in_viewport_depth_direction_index)
@@ -129,3 +162,5 @@ brx_float4x4 brx_vct_application_bridge_get_clipmap_stack_level_projection_matri
 {
     return g_clipmap_stack_level_projection_matrices[in_clipmap_stack_level_index];
 }
+
+#endif

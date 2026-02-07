@@ -471,6 +471,11 @@ brx_anari_vec3 brx_anari_pal_device::hdri_light_get_up() const
     return this->m_hdri_light_up;
 }
 
+void brx_anari_pal_device::hdri_light_set_enable_skybox_renderer(bool hdri_light_enable_skybox_renderer)
+{
+    this->m_hdri_light_enable_skybox_renderer = hdri_light_enable_skybox_renderer;
+}
+
 void brx_anari_pal_device::hdri_light_render_sh_projection(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, bool &inout_hdri_light_sh_dirty, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout)
 {
     if (inout_hdri_light_sh_dirty)
@@ -551,39 +556,42 @@ void brx_anari_pal_device::hdri_light_render_sh_projection(uint32_t frame_thrott
 
 void brx_anari_pal_device::hdri_light_render_skybox(uint32_t frame_throttling_index, brx_pal_graphics_command_buffer *graphics_command_buffer, BRX_ANARI_HDRI_LIGHT_LAYOUT hdri_light_layout)
 {
-    if ((BRX_ANARI_HDRI_LIGHT_LAYOUT_EQUIRECTANGULAR == hdri_light_layout) || (BRX_ANARI_HDRI_LIGHT_LAYOUT_OCTAHEDRAL == hdri_light_layout))
+    if (this->m_hdri_light_enable_skybox_renderer)
     {
+        if ((BRX_ANARI_HDRI_LIGHT_LAYOUT_EQUIRECTANGULAR == hdri_light_layout) || (BRX_ANARI_HDRI_LIGHT_LAYOUT_OCTAHEDRAL == hdri_light_layout))
         {
-            brx_pal_graphics_pipeline *environment_lighting_skybox_pipeline;
-            switch (hdri_light_layout)
             {
-            case BRX_ANARI_HDRI_LIGHT_LAYOUT_EQUIRECTANGULAR:
-            {
-                environment_lighting_skybox_pipeline = this->m_environment_lighting_skybox_equirectangular_map_pipeline;
-            }
-            break;
-            default:
-            {
-                assert(BRX_ANARI_HDRI_LIGHT_LAYOUT_OCTAHEDRAL == hdri_light_layout);
-                environment_lighting_skybox_pipeline = this->m_environment_lighting_skybox_octahedral_map_pipeline;
-            }
+                brx_pal_graphics_pipeline *environment_lighting_skybox_pipeline;
+                switch (hdri_light_layout)
+                {
+                case BRX_ANARI_HDRI_LIGHT_LAYOUT_EQUIRECTANGULAR:
+                {
+                    environment_lighting_skybox_pipeline = this->m_environment_lighting_skybox_equirectangular_map_pipeline;
+                }
+                break;
+                default:
+                {
+                    assert(BRX_ANARI_HDRI_LIGHT_LAYOUT_OCTAHEDRAL == hdri_light_layout);
+                    environment_lighting_skybox_pipeline = this->m_environment_lighting_skybox_octahedral_map_pipeline;
+                }
+                }
+
+                graphics_command_buffer->bind_graphics_pipeline(environment_lighting_skybox_pipeline);
             }
 
-            graphics_command_buffer->bind_graphics_pipeline(environment_lighting_skybox_pipeline);
+            {
+                brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_none_update_descriptor_set};
+
+                uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(frame_throttling_index)};
+
+                graphics_command_buffer->bind_graphics_descriptor_sets(this->m_none_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+            }
+
+            graphics_command_buffer->draw(3U, 1U, 0U, 0U);
         }
-
+        else
         {
-            brx_pal_descriptor_set const *const descriptor_sets[] = {this->m_none_update_descriptor_set};
-
-            uint32_t const dynamic_offsets[] = {this->helper_compute_uniform_buffer_dynamic_offset<none_update_set_uniform_buffer_binding>(frame_throttling_index)};
-
-            graphics_command_buffer->bind_graphics_descriptor_sets(this->m_none_update_pipeline_layout, sizeof(descriptor_sets) / sizeof(descriptor_sets[0]), descriptor_sets, sizeof(dynamic_offsets) / sizeof(dynamic_offsets[0]), dynamic_offsets);
+            assert(BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED == hdri_light_layout);
         }
-
-        graphics_command_buffer->draw(3U, 1U, 0U, 0U);
-    }
-    else
-    {
-        assert(BRX_ANARI_HDRI_LIGHT_LAYOUT_UNDEFINED == hdri_light_layout);
     }
 }

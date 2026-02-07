@@ -218,10 +218,12 @@ public:
 	virtual brx_anari_vec3 hdri_light_get_direction() const = 0;
 	virtual brx_anari_vec3 hdri_light_get_up() const = 0;
 
+	virtual void hdri_light_set_enable_skybox_renderer(bool hdri_light_enable_skybox_renderer) = 0;
+
 	virtual void renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY gi_quality) = 0;
 	virtual BRX_ANARI_RENDERER_GI_QUALITY renderer_get_gi_quality() const = 0;
 
-	virtual void renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style) = 0;
+	virtual void renderer_set(brx_anari_vec3 background, BRX_ANARI_RENDERER_STYLE renderer_style, float toon_shading_first_shade_color_step, float toon_shading_first_shade_color_feather, float toon_shading_second_shade_color_step, float toon_shading_second_shade_color_feather, float toon_shading_base_color, float toon_shading_first_shade_color, float toon_shading_second_shade_color, float toon_shading_high_color_power, float toon_shading_rim_light_power, float toon_shading_rim_light_inside_mask) = 0;
 
 	virtual void camera_set(brx_anari_vec3 position, brx_anari_vec3 direction, brx_anari_vec3 up, float fovy, float near, float far) = 0;
 

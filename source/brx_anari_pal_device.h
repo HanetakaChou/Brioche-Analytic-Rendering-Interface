@@ -197,6 +197,16 @@ class brx_anari_pal_device final : public brx_anari_device
 	BRX_ANARI_RENDERER_GI_QUALITY m_renderer_gi_quality;
 
 	BRX_ANARI_RENDERER_STYLE m_renderer_style;
+	float m_renderer_toon_shading_first_shade_color_step;
+	float m_renderer_toon_shading_first_shade_color_feather;
+	float m_renderer_toon_shading_second_shade_color_step;
+	float m_renderer_toon_shading_second_shade_color_feather;
+	float m_renderer_toon_shading_base_color;
+	float m_renderer_toon_shading_first_shade_color;
+	float m_renderer_toon_shading_second_shade_color;
+	float m_renderer_toon_shading_high_color_power;
+	float m_renderer_toon_shading_rim_light_power;
+	float m_renderer_toon_shading_rim_light_inside_mask;
 
 public:
 	brx_anari_pal_device();
@@ -281,7 +291,7 @@ private:
 	void renderer_set_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY gi_quality) override;
 	BRX_ANARI_RENDERER_GI_QUALITY renderer_get_gi_quality() const override;
 
-	void renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style) override;
+	void renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style, float toon_shading_first_shade_color_step, float toon_shading_first_shade_color_feather, float toon_shading_second_shade_color_step, float toon_shading_second_shade_color_feather, float toon_shading_base_color, float toon_shading_first_shade_color, float toon_shading_second_shade_color, float toon_shading_high_color_power, float toon_shading_rim_light_power, float toon_shading_rim_light_inside_mask) override;
 
 	void camera_set(brx_anari_vec3 position, brx_anari_vec3 direction, brx_anari_vec3 up, float fovy, float near, float far) override;
 

@@ -21,7 +21,7 @@
 // D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT 4096
 // Vulkan Core: maxUniformBufferRange 16384 = 16 * 1024
 // Vulkan Roadmap 2022: maxUniformBufferRange 65536 = 16 * 4096
-#define NONE_UPDATE_MAX_AREA_LIGHTING_COUNT 1346u
+#define NONE_UPDATE_MAX_AREA_LIGHTING_COUNT 1345u
 
 brx_read_write_byte_address_buffer(u_environment_map_sh_coefficients, 0, 0);
 
@@ -56,6 +56,18 @@ brx_cbuffer(none_update_set_uniform_buffer_binding, 0, 6)
     brx_uint g_area_lighting_count;
     brx_uint g_environment_map_layout;
     brx_uint g_renderer_gi_quality;
+    brx_float g_renderer_toon_shading_first_shade_color_step;
+    brx_float g_renderer_toon_shading_first_shade_color_feather;
+    brx_float g_renderer_toon_shading_second_shade_color_step;
+    brx_float g_renderer_toon_shading_second_shade_color_feather;
+    brx_float g_renderer_toon_shading_base_color;
+    brx_float g_renderer_toon_shading_first_shade_color;
+    brx_float g_renderer_toon_shading_second_shade_color;
+    brx_float g_renderer_toon_shading_high_color_power;
+    brx_float g_renderer_toon_shading_rim_light_power;
+    brx_float g_renderer_toon_shading_rim_light_inside_mask;
+    brx_uint _unused_padding_5;
+    brx_uint _unused_padding_6;
     brx_float4 g_area_lightings[3 * brx_int(NONE_UPDATE_MAX_AREA_LIGHTING_COUNT)];
 };
 

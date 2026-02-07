@@ -166,7 +166,17 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_renderer_gi_quality_lock(false),
 #endif
       m_renderer_gi_quality(BRX_ANARI_RENDERER_GI_QUALITY_DISABLE),
-      m_renderer_style(BRX_ANARI_RENDERER_STYLE_PHYSICALLY_BASED_RENDERING)
+      m_renderer_style(BRX_ANARI_RENDERER_STYLE_PHYSICALLY_BASED_RENDERING),
+      m_renderer_toon_shading_first_shade_color_step(0.8),
+      m_renderer_toon_shading_first_shade_color_feather(0.0001),
+      m_renderer_toon_shading_second_shade_color_step(0.5),
+      m_renderer_toon_shading_second_shade_color_feather(0.0001),
+      m_renderer_toon_shading_base_color(0.7843138),
+      m_renderer_toon_shading_first_shade_color(0.49411768),
+      m_renderer_toon_shading_second_shade_color(0.19607845),
+      m_renderer_toon_shading_high_color_power(0.0),
+      m_renderer_toon_shading_rim_light_power(0.1),
+      m_renderer_toon_shading_rim_light_inside_mask(0.0001)
 {
 }
 
@@ -1003,9 +1013,19 @@ void brx_anari_pal_device::uninit()
     this->m_device = NULL;
 }
 
-void brx_anari_pal_device::renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style)
+void brx_anari_pal_device::renderer_set_style(BRX_ANARI_RENDERER_STYLE renderer_style, float toon_shading_first_shade_color_step, float toon_shading_first_shade_color_feather, float toon_shading_second_shade_color_step, float toon_shading_second_shade_color_feather, float toon_shading_base_color, float toon_shading_first_shade_color, float toon_shading_second_shade_color, float toon_shading_high_color_power, float toon_shading_rim_light_power, float toon_shading_rim_light_inside_mask)
 {
     this->m_renderer_style = renderer_style;
+    this->m_renderer_toon_shading_first_shade_color_step = toon_shading_first_shade_color_step;
+    this->m_renderer_toon_shading_first_shade_color_feather = toon_shading_first_shade_color_feather;
+    this->m_renderer_toon_shading_second_shade_color_step = toon_shading_second_shade_color_step;
+    this->m_renderer_toon_shading_second_shade_color_feather = toon_shading_second_shade_color_feather;
+    this->m_renderer_toon_shading_base_color = toon_shading_base_color;
+    this->m_renderer_toon_shading_first_shade_color = toon_shading_first_shade_color;
+    this->m_renderer_toon_shading_second_shade_color = toon_shading_second_shade_color;
+    this->m_renderer_toon_shading_high_color_power = toon_shading_high_color_power;
+    this->m_renderer_toon_shading_rim_light_power = toon_shading_rim_light_power;
+    this->m_renderer_toon_shading_rim_light_inside_mask = toon_shading_rim_light_inside_mask;
 }
 
 void brx_anari_pal_device::frame_attach_window(void *wsi_window, float intermediate_width_scale, float intermediate_height_scale)
@@ -1514,6 +1534,16 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
             this->quad_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
             this->hdri_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
             this->voxel_cone_tracing_none_update_set_uniform_buffer(none_update_set_uniform_buffer_destination);
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_first_shade_color_step = this->m_renderer_toon_shading_first_shade_color_step;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_first_shade_color_feather = this->m_renderer_toon_shading_first_shade_color_feather;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_second_shade_color_step = this->m_renderer_toon_shading_second_shade_color_step;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_second_shade_color_feather = this->m_renderer_toon_shading_second_shade_color_feather;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_base_color = this->m_renderer_toon_shading_base_color;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_first_shade_color = this->m_renderer_toon_shading_first_shade_color;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_second_shade_color = this->m_renderer_toon_shading_second_shade_color;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_high_color_power = this->m_renderer_toon_shading_high_color_power;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_rim_light_power = this->m_renderer_toon_shading_rim_light_power;
+            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_rim_light_inside_mask = this->m_renderer_toon_shading_rim_light_inside_mask;
         }
 
         // HDRI Light SH Projection

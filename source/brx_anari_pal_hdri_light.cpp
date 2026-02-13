@@ -21,6 +21,8 @@
 #include "../shaders/none_update_resource_binding.bsli"
 #include "../shaders/surface_resource_binding.bsli"
 
+static constexpr float const INTERNAL_ROTATION_EPSILON = 1E-6F;
+
 void brx_anari_pal_device::hdri_light_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination)
 {
     DirectX::XMFLOAT4X4 world_to_environment_map_transform;
@@ -443,12 +445,60 @@ void brx_anari_pal_device::hdri_light_set_layout(BRX_ANARI_HDRI_LIGHT_LAYOUT lay
 
 void brx_anari_pal_device::hdri_light_set_direction(brx_anari_vec3 direction)
 {
-    this->m_hdri_light_direction = direction;
+#ifndef NDEBUG
+    assert(!this->m_hdri_light_dirty_lock);
+    this->m_hdri_light_dirty_lock = true;
+#endif
+
+    bool hdri_light_direction_dirty;
+    {
+        DirectX::XMFLOAT3 const new_hdri_light_direction(direction.m_x, direction.m_y, direction.m_z);
+
+        DirectX::XMFLOAT3 const old_hdri_light_direction(this->m_hdri_light_direction.m_x, this->m_hdri_light_direction.m_y, this->m_hdri_light_direction.m_z);
+
+        bool hdri_light_direction_not_dirty = DirectX::XMVector3Less(DirectX::XMVectorAbs(DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&new_hdri_light_direction), DirectX::XMLoadFloat3(&old_hdri_light_direction))), DirectX::XMVectorReplicate(INTERNAL_ROTATION_EPSILON));
+
+        hdri_light_direction_dirty = (!hdri_light_direction_not_dirty);
+    }
+
+    if (hdri_light_direction_dirty)
+    {
+        this->m_hdri_light_direction = direction;
+        this->m_hdri_light_dirty = true;
+    }
+
+#ifndef NDEBUG
+    this->m_hdri_light_dirty_lock = false;
+#endif
 }
 
 void brx_anari_pal_device::hdri_light_set_up(brx_anari_vec3 up)
 {
-    this->m_hdri_light_up = up;
+#ifndef NDEBUG
+    assert(!this->m_hdri_light_dirty_lock);
+    this->m_hdri_light_dirty_lock = true;
+#endif
+
+    bool hdri_light_up_dirty;
+    {
+        DirectX::XMFLOAT3 const new_hdri_light_up(up.m_x, up.m_y, up.m_z);
+
+        DirectX::XMFLOAT3 const old_hdri_light_up(this->m_hdri_light_up.m_x, this->m_hdri_light_up.m_y, this->m_hdri_light_up.m_z);
+
+        bool hdri_light_up_not_dirty = DirectX::XMVector3Less(DirectX::XMVectorAbs(DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&new_hdri_light_up), DirectX::XMLoadFloat3(&old_hdri_light_up))), DirectX::XMVectorReplicate(INTERNAL_ROTATION_EPSILON));
+
+        hdri_light_up_dirty = (!hdri_light_up_not_dirty);
+    }
+
+    if (hdri_light_up_dirty)
+    {
+        this->m_hdri_light_up = up;
+        this->m_hdri_light_dirty = true;
+    }
+
+#ifndef NDEBUG
+    this->m_hdri_light_dirty_lock = false;
+#endif
 }
 
 brx_anari_image *brx_anari_pal_device::hdri_light_get_radiance() const

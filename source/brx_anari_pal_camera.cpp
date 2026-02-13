@@ -21,11 +21,21 @@
 void brx_anari_pal_device::camera_set(brx_anari_vec3 position, brx_anari_vec3 direction, brx_anari_vec3 up, float fovy, float near, float far)
 {
     this->m_camera_position = position;
-    this->m_camera_direction = direction;
-    this->m_camera_up = up;
-    this->m_camera_fovy = fovy;
-    this->m_camera_near = near;
-    this->m_camera_far = far;
+    {
+        DirectX::XMFLOAT3 const camera_direction(direction.m_x, direction.m_y, direction.m_z);
+        DirectX::XMFLOAT3 normalized_camera_direction;
+        DirectX::XMStoreFloat3(&normalized_camera_direction, DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&camera_direction)));
+        this->m_camera_direction = brx_anari_vec3{normalized_camera_direction.x, normalized_camera_direction.y, normalized_camera_direction.z};
+    }
+    {
+        DirectX::XMFLOAT3 const camera_up(up.m_x, up.m_y, up.m_z);
+        DirectX::XMFLOAT3 normalized_camera_up;
+        DirectX::XMStoreFloat3(&normalized_camera_up, DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&camera_up)));
+        this->m_camera_up = brx_anari_vec3{normalized_camera_up.x, normalized_camera_up.y, normalized_camera_up.z};
+    }
+    this->m_camera_fovy = std::min(std::max(0.01745329251994329576923690768489F, fovy), 3.1241393610698499426934064755946F);
+    this->m_camera_near = std::max(0.001F, near);
+    this->m_camera_far = std::max(std::max(0.001F, near) + 0.001F, far);
 }
 
 void brx_anari_pal_device::camera_upload_none_update_set_uniform_buffer(none_update_set_uniform_buffer_binding *none_update_set_uniform_buffer_destination)

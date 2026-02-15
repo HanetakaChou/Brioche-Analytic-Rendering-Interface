@@ -25,7 +25,7 @@ brx_float internal_aa_step(brx_float edge, brx_float x, brx_float epsilon)
     return brx_clamp((x - edge) / brx_max(1e-4, brx_max(brx_fwidth(x), epsilon)) + 0.5, 0.0, 1.0);
 }
 
-brx_float internal_three_base_color_ramp_function(in brx_float NdotL, in brx_float shadow_attenuation, out brx_float out_1st_shade_color_shadow_mask)
+brx_float internal_three_base_color_ramp_function(in brx_float NdotL, in brx_float shadow_attenuation)
 {
     // UTS3GUI: [shaderPropBaseColorText](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Editor/UTS3GUI.cs#L789)
     // Toon/Toon: [_BaseColor_Step](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/Integrated/Shaders/UnityToon.shader#L81)
@@ -129,8 +129,6 @@ brx_float internal_three_base_color_ramp_function(in brx_float NdotL, in brx_flo
     // UTS_OtherLightsShadingGrademap: [Set_ShadeShadowMask](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapOtherLight.hlsl#L113)
     brx_float _2nd_shade_color_shadow_mask = internal_aa_step(-_2nd_shade_color_step, -_half_lambert_var, _2nd_shade_color_feather);
 
-    out_1st_shade_color_shadow_mask = _1st_shade_color_shadow_mask;
-
     // UTS_MainLight: [Set_FinalBaseColor](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherMainLight.hlsl#L163)
     // UTS_OtherLights: [finalColor](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherOtherLight.hlsl#L96)
     // UTS_MainLightShadingGrademap: [Set_FinalBaseColor](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapMainLight.hlsl#L172)
@@ -138,55 +136,13 @@ brx_float internal_three_base_color_ramp_function(in brx_float NdotL, in brx_flo
     return brx_lerp(_base_color, brx_lerp(_1st_shade_color, _2nd_shade_color, _2nd_shade_color_shadow_mask), _1st_shade_color_shadow_mask);
 }
 
-brx_float internal_high_color_ramp_function(in brx_float3 N, in brx_float3 V, in brx_float3 L)
-{
-    // UTS_MainLight: [halfDirection](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherMainLight.hlsl#L83)
-    // UTS_OtherLights: [halfDirection](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherOtherLight.hlsl#L44)
-    // UTS_MainLightShadingGrademap: [halfDirection](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapMainLight.hlsl#L90)
-    // UTS_OtherLightsShadingGrademap: [halfDirection](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapOtherLight.hlsl#L46)
-    brx_float3 half_direction = brx_normalize(V + L);
-
-    // UTS_MainLight: [_Specular_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherMainLight.hlsl#L166)
-    // UTS_OtherLights: [_Specular_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherOtherLight.hlsl#L104)
-    // UTS_MainLightShadingGrademap: [_Specular_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapMainLight.hlsl#L203)
-    // UTS_OtherLightsShadingGrademap: [_Specular_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapOtherLight.hlsl#L140)
-    brx_float _specular_var = brx_clamp(0.5 + 0.5 * brx_clamp(brx_dot(half_direction, N), -1.0, 1.0), 0.0, 1.0);
-
-    // Toon/Toon: [_HighColor_Power](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/Integrated/Shaders/UnityToon.shader#L107)
-    // Toon/Toon (Tessellation): [_HighColor_Power](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/Integrated/Shaders/UnityToonTessellation.shader#L107)
-    // Capsule.mat: [_HighColor_Power](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toon-scenes/HDRP/MetaverseOutlineLighting/Capsule.mat#L285)
-    // const brx_float _high_color_power = 0.0;
-    brx_float _high_color_power = brx_clamp(g_renderer_toon_shading_high_color_power, 0.0, 1.0);
-
-    brx_float _high_color_power_var = 1.0 - brx_pow(brx_max(0.0, _high_color_power), 5.0);
-
-    // UTS_MainLight: [_TweakHighColorMask_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherMainLight.hlsl#L167)
-    // UTS_OtherLights: [_TweakHighColorMask_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherOtherLight.hlsl#L105)
-    // UTS_MainLightShadingGrademap: [_TweakHighColorMask_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapMainLight.hlsl#L204)
-    // UTS_OtherLightsShadingGrademap: [_TweakHighColorMask_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapOtherLight.hlsl#L141)
-    brx_float _tweak_high_color_mask_var = internal_aa_step(_high_color_power_var, _specular_var, 1e-4);
-
-    // UTS_MainLight: [_HighColor_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherMainLight.hlsl#L170)
-    // UTS_OtherLights: [_HighColor_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherOtherLight.hlsl#L108)
-    // UTS_MainLightShadingGrademap: [_HighColor_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapMainLight.hlsl#L210)
-    // UTS_OtherLightsShadingGrademap: [_HighColor_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapOtherLight.hlsl#L143)
-    //
-    // UTS_MainLight: [Set_HighColor](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherMainLight.hlsl#L203)
-    // UTS_OtherLights: [finalColor](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherOtherLight.hlsl#L132)
-    // UTS_MainLightShadingGrademap: [Set_HighColor](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapMainLight.hlsl#L240)
-    // UTS_OtherLightsShadingGrademap: [finalColor](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapOtherLight.hlsl#L167)
-    // brx_float3 high_color = _tweak_high_color_mask_var * _high_color_var * light_color;
-
-    return _tweak_high_color_mask_var;
-}
-
-brx_float internal_rim_light_ramp_function(in brx_float3 N, in brx_float3 V)
+brx_float internal_rim_light_ramp_function(in brx_float NdotV)
 {
     // Real-Time Rendering Fourth Edition / 15.2.1 Shading Normal Contour Edges
     //
     // UTS_MainLight: [_RimArea_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/DoubleShadeWithFeatherMainLight.hlsl#L207)
     // UTS_MainLightShadingGrademap: [_RimArea_var](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/HDRP/Shaders/ShadingGrademapMainLight.hlsl#L246)
-    brx_float _rim_area_var = brx_clamp(1.0 - brx_dot(N, V), 0.0, 1.0);
+    brx_float _rim_area_var = brx_clamp(1.0 - NdotV, 0.0, 1.0);
 
     // Toon/Toon: [_RimLight_Power](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/Integrated/Shaders/UnityToon.shader#L121)
     // Toon/Toon (Tessellation): [_RimLight_Power](https://github.com/Unity-Technologies/com.unity.toonshader/blob/master/com.unity.toonshader/Runtime/Integrated/Shaders/UnityToonTessellation.shader#L121)
@@ -223,8 +179,7 @@ brx_float internal_rim_light_ramp_function(in brx_float3 N, in brx_float3 V)
 
 brx_float brx_ltc_application_bridge_ramp_function(in brx_float form_factor, in brx_float attenuation)
 {
-    brx_float unused_1st_shade_color_shadow_mask;
-    return internal_three_base_color_ramp_function(form_factor, attenuation, unused_1st_shade_color_shadow_mask);
+    return internal_three_base_color_ramp_function(form_factor, attenuation);
 }
 
 brx_float internal_celluloid_face_shadow_attenuation(in brx_float3 surface_position_model_space, in brx_float3 directional_lighting_direction_model_space)

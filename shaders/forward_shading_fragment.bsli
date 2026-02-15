@@ -155,6 +155,7 @@ brx_pixel_shader_parameter_end(main)
         // we can simply use the over operation to render the result correctly (just like how we render the imgui)
         surface_opacity = base_color_and_opacity.w;
 
+#if defined(FORWARD_SHADING_RENDER_STYLE) && (FORWARD_SHADING_RENDER_STYLE_PHYSICALLY_BASED_RENDERING == FORWARD_SHADING_RENDER_STYLE)
         brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_METALLIC_ROUGHNESS))
         {
             brx_float2 roughness_metallic = brx_sample_2d(t_surface_images[FORWARD_SHADING_SURFACE_METALLIC_ROUGHNESS_TEXTURE_INDEX], s_wrap_sampler, texcoord).yz;
@@ -168,18 +169,24 @@ brx_pixel_shader_parameter_end(main)
         }
 
         {
-#if defined(FORWARD_SHADING_RENDER_STYLE) && (FORWARD_SHADING_RENDER_STYLE_PHYSICALLY_BASED_RENDERING == FORWARD_SHADING_RENDER_STYLE)
             const brx_float dielectric_specular = 0.04;
             // UE4: https://github.com/EpicGames/UnrealEngine/blob/4.21/Engine/Shaders/Private/MobileBasePassPixelShader.usf#L376
             surface_specular_color = brx_clamp((dielectric_specular - dielectric_specular * surface_metallic) + surface_base_color * surface_metallic, 0.0, 1.0);
             surface_diffuse_color = brx_clamp(surface_base_color - surface_base_color * surface_metallic, 0.0, 1.0);
+        }
 #elif defined(FORWARD_SHADING_RENDER_STYLE) && (FORWARD_SHADING_RENDER_STYLE_TOON_SHADING == FORWARD_SHADING_RENDER_STYLE)
-            surface_specular_color = brx_clamp(surface_base_color * surface_metallic, 0.0, 1.0);
-            surface_diffuse_color = brx_clamp(surface_base_color - surface_base_color * surface_metallic, 0.0, 1.0);
+        {
+            surface_roughness = 1.0;
+            surface_metallic = 0.0;
+        }
+
+        {
+            surface_specular_color = brx_float3(0.0, 0.0, 0.0);
+            surface_diffuse_color = surface_base_color;
+        }
 #else
 #error Unknown Render Style
 #endif
-        }
 
         brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_EMISSIVE))
         {
@@ -324,19 +331,12 @@ brx_pixel_shader_parameter_end(main)
             brx_float3 L = brx_normalize(quad_vertices_world_space[0] + quad_vertices_world_space[1] + quad_vertices_world_space[2] + quad_vertices_world_space[3]);
 
             // three base color outgoing radiance
-            brx_float first_shade_color_shadow_mask;
             {
                 brx_float3 area_lighting_direction_model_space = brx_mul(g_inverse_model_transform, brx_float4(L.x, L.y, L.z, 0.0)).xyz;
                 brx_float NdotL = brx_clamp(internal_celluloid_face_shadow_attenuation(surface_position_non_deformed_model_space, area_lighting_direction_model_space), -1.0, 1.0);
 
-                brx_float3 three_base_color_transfer_function = surface_diffuse_color * internal_three_base_color_ramp_function(NdotL, area_lighting_attenuation, first_shade_color_shadow_mask);
+                brx_float3 three_base_color_transfer_function = surface_diffuse_color * internal_three_base_color_ramp_function(NdotL, area_lighting_attenuation);
                 direct_radiance += (area_lighting_radiance * three_base_color_transfer_function);
-            }
-
-            // high color outgoing radiance
-            {
-                brx_float3 high_color_transfer_function = surface_specular_color * brx_lerp(internal_high_color_ramp_function(N, V, L), 0.0, first_shade_color_shadow_mask);
-                direct_radiance += (area_lighting_radiance * high_color_transfer_function);
             }
         }
         else
@@ -528,7 +528,6 @@ brx_pixel_shader_parameter_end(main)
             }
 #elif defined(FORWARD_SHADING_RENDER_STYLE) && (FORWARD_SHADING_RENDER_STYLE_TOON_SHADING == FORWARD_SHADING_RENDER_STYLE)
             // three base color outgoing radiance
-            brx_float first_shade_color_shadow_mask;
             {
                 brx_float final_NdotL;
                 brx_branch if (surface_material_face)
@@ -541,22 +540,19 @@ brx_pixel_shader_parameter_end(main)
                     final_NdotL = NdotL;
                 }
 
-                brx_float3 three_base_color_transfer_function = surface_diffuse_color * internal_three_base_color_ramp_function(final_NdotL, directional_lighting_shadow_attenuation, first_shade_color_shadow_mask);
+                brx_float3 three_base_color_transfer_function = surface_diffuse_color * internal_three_base_color_ramp_function(final_NdotL, directional_lighting_shadow_attenuation);
                 direct_radiance += (directional_lighting_irradiance * three_base_color_transfer_function);
-            }
-
-            // high color outgoing radiance
-            {
-                brx_float3 high_color_transfer_function = surface_specular_color * brx_lerp(internal_high_color_ramp_function(N, V, L), 0.0, first_shade_color_shadow_mask);
-                direct_radiance += (directional_lighting_irradiance * high_color_transfer_function);
             }
 
             // rim light outgoing radiance
             {
-                // TODO: find rim color
-                const brx_float3 rim_color = brx_float3(1.0, 1.0, 1.0);
+                brx_float surface_diffuse_color_maximum = brx_max(brx_max(surface_diffuse_color.x, surface_diffuse_color.y), surface_diffuse_color.z);
+                brx_float3 surface_diffuse_color_tint = brx_clamp(surface_diffuse_color / brx_max(1e-7, surface_diffuse_color_maximum), brx_float3(0.0, 0.0, 0.0), brx_float3(1.0, 1.0, 1.0));
+                brx_float3 rim_color = surface_diffuse_color_tint;
 
-                brx_float3 rim_light_transfer_function = rim_color * internal_rim_light_ramp_function(N, V);
+                brx_float NdotV = brx_dot(N, V);
+
+                brx_float3 rim_light_transfer_function = rim_color * internal_rim_light_ramp_function(NdotV);
                 direct_radiance += (directional_lighting_irradiance * rim_light_transfer_function);
             }
 #else

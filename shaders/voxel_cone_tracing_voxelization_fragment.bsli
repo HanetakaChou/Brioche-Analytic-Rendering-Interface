@@ -125,6 +125,7 @@ brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_
     // we can simply use the over operation to render the result correctly (just like how we render the imgui)
     out_surface_opacity = base_color_and_opacity.w;
 
+#if defined(VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE) && (VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_PHYSICALLY_BASED_RENDERING == VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE)
     brx_float surface_metallic;
     brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_METALLIC_ROUGHNESS))
     {
@@ -139,18 +140,24 @@ brx_bool brx_vct_application_bridge_get_surface(in brx_float3 in_normal, in brx_
     }
 
     {
-#if defined(VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE) && (VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_PHYSICALLY_BASED_RENDERING == VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE)
         const brx_float dielectric_specular = 0.04;
         // UE4: https://github.com/EpicGames/UnrealEngine/blob/4.21/Engine/Shaders/Private/MobileBasePassPixelShader.usf#L376
         out_surface_specular_color = brx_clamp((dielectric_specular - dielectric_specular * surface_metallic) + surface_base_color * surface_metallic, 0.0, 1.0);
         out_surface_diffuse_color = brx_clamp(surface_base_color - surface_base_color * surface_metallic, 0.0, 1.0);
+    }
 #elif defined(VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE) && (VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_TOON_SHADING == VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE)
-        out_surface_specular_color = brx_clamp(surface_base_color * surface_metallic, 0.0, 1.0);
-        out_surface_diffuse_color = brx_clamp(surface_base_color - surface_base_color * surface_metallic, 0.0, 1.0);
+    {
+        out_surface_roughness = 1.0;
+    }
+
+    {
+        out_surface_specular_color = brx_float3(0.0, 0.0, 0.0);
+        out_surface_diffuse_color = surface_base_color;
+    }
 #else
 #error Unknown Render Style
 #endif
-    }
+    
 
     brx_branch if (0u != (buffer_texture_flags & SURFACE_TEXTURE_FLAG_EMISSIVE))
     {
@@ -302,19 +309,12 @@ void brx_vct_application_bridge_get_outgoing_radiances(in brx_float3 in_outgoing
                 brx_float3 V = outgoing_direction_world_space;
 
                 // three base color outgoing radiance
-                brx_float first_shade_color_shadow_mask;
                 {
                     brx_float3 area_lighting_direction_model_space = brx_mul(g_inverse_model_transform, brx_float4(L.x, L.y, L.z, 0.0)).xyz;
                     brx_float NdotL = brx_clamp(internal_celluloid_face_shadow_attenuation(in_surface_position_non_deformed_model_space, area_lighting_direction_model_space), -1.0, 1.0);
 
-                    brx_float3 three_base_color_transfer_function = in_surface_diffuse_color * internal_three_base_color_ramp_function(NdotL, area_lighting_attenuation, first_shade_color_shadow_mask);
+                    brx_float3 three_base_color_transfer_function = in_surface_diffuse_color * internal_three_base_color_ramp_function(NdotL, area_lighting_attenuation);
                     out_outgoing_radiances[direction_index] += (area_lighting_radiance * three_base_color_transfer_function);
-                }
-
-                // high color outgoing radiance
-                {
-                    brx_float3 high_color_transfer_function = in_surface_specular_color * brx_lerp(internal_high_color_ramp_function(N, V, L), 0.0, first_shade_color_shadow_mask);
-                   out_outgoing_radiances[direction_index] += (area_lighting_radiance * high_color_transfer_function);
                 }
             }
         }
@@ -535,7 +535,6 @@ void brx_vct_application_bridge_get_outgoing_radiances(in brx_float3 in_outgoing
                 }
 #elif defined(VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE) && (VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE_TOON_SHADING == VOXEL_CONE_TRACING_VOXELIZATION_RENDER_STYLE)
                 // three base color outgoing radiance
-                brx_float first_shade_color_shadow_mask;
                 {
                     brx_float final_NdotL;
                     brx_branch if (in_surface_material_face)
@@ -548,22 +547,19 @@ void brx_vct_application_bridge_get_outgoing_radiances(in brx_float3 in_outgoing
                         final_NdotL = NdotL;
                     }
 
-                    brx_float3 three_base_color_transfer_function = in_surface_diffuse_color * internal_three_base_color_ramp_function(final_NdotL, directional_lighting_shadow_attenuation, first_shade_color_shadow_mask);
+                    brx_float3 three_base_color_transfer_function = in_surface_diffuse_color * internal_three_base_color_ramp_function(final_NdotL, directional_lighting_shadow_attenuation);
                     out_outgoing_radiances[direction_index] += (directional_lighting_irradiance * three_base_color_transfer_function);
-                }
-
-                // high color outgoing radiance
-                {
-                    brx_float3 high_color_transfer_function = in_surface_specular_color * brx_lerp(internal_high_color_ramp_function(N, V, L), 0.0, first_shade_color_shadow_mask);
-                    out_outgoing_radiances[direction_index] += (directional_lighting_irradiance * high_color_transfer_function);
                 }
 
                 // rim light outgoing radiance
                 {
-                    // TODO: find rim color
-                    const brx_float3 rim_color = brx_float3(1.0, 1.0, 1.0);
+                    brx_float surface_diffuse_color_maximum = brx_max(brx_max(in_surface_diffuse_color.x, in_surface_diffuse_color.y), in_surface_diffuse_color.z);
+                    brx_float3 surface_diffuse_color_tint = brx_clamp(in_surface_diffuse_color / brx_max(1e-7, surface_diffuse_color_maximum), brx_float3(0.0, 0.0, 0.0), brx_float3(1.0, 1.0, 1.0));
+                    brx_float3 rim_color = surface_diffuse_color_tint;
 
-                    brx_float3 rim_transfer_function = rim_color * internal_rim_light_ramp_function(N, V);
+                    brx_float NdotV = brx_dot(N, V);
+
+                    brx_float3 rim_transfer_function = rim_color * internal_rim_light_ramp_function(NdotV);
                     out_outgoing_radiances[direction_index] += (directional_lighting_irradiance * rim_transfer_function);
                 }
 #else

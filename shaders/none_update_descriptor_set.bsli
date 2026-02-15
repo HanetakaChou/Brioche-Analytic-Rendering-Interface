@@ -63,11 +63,11 @@ brx_cbuffer(none_update_set_uniform_buffer_binding, 0, 6)
     brx_float g_renderer_toon_shading_base_color;
     brx_float g_renderer_toon_shading_first_shade_color;
     brx_float g_renderer_toon_shading_second_shade_color;
-    brx_float g_renderer_toon_shading_high_color_power;
     brx_float g_renderer_toon_shading_rim_light_power;
     brx_float g_renderer_toon_shading_rim_light_inside_mask;
     brx_uint _unused_padding_5;
     brx_uint _unused_padding_6;
+    brx_uint _unused_padding_7;
     brx_float4 g_area_lightings[3 * brx_int(NONE_UPDATE_MAX_AREA_LIGHTING_COUNT)];
 };
 

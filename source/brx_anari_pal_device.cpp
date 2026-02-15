@@ -176,7 +176,6 @@ brx_anari_pal_device::brx_anari_pal_device()
       m_renderer_toon_shading_base_color(0.7843138),
       m_renderer_toon_shading_first_shade_color(0.49411768),
       m_renderer_toon_shading_second_shade_color(0.19607845),
-      m_renderer_toon_shading_high_color_power(0.0),
       m_renderer_toon_shading_rim_light_power(0.1),
       m_renderer_toon_shading_rim_light_inside_mask(0.0001)
 {
@@ -1015,7 +1014,7 @@ void brx_anari_pal_device::uninit()
     this->m_device = NULL;
 }
 
-void brx_anari_pal_device::renderer_set(brx_anari_vec3 background, BRX_ANARI_RENDERER_STYLE renderer_style, float toon_shading_first_shade_color_step, float toon_shading_first_shade_color_feather, float toon_shading_second_shade_color_step, float toon_shading_second_shade_color_feather, float toon_shading_base_color, float toon_shading_first_shade_color, float toon_shading_second_shade_color, float toon_shading_high_color_power, float toon_shading_rim_light_power, float toon_shading_rim_light_inside_mask)
+void brx_anari_pal_device::renderer_set(brx_anari_vec3 background, BRX_ANARI_RENDERER_STYLE renderer_style, float toon_shading_first_shade_color_step, float toon_shading_first_shade_color_feather, float toon_shading_second_shade_color_step, float toon_shading_second_shade_color_feather, float toon_shading_base_color, float toon_shading_first_shade_color, float toon_shading_second_shade_color, float toon_shading_rim_light_power, float toon_shading_rim_light_inside_mask)
 {
     this->m_renderer_background = background;
     this->m_renderer_style = renderer_style;
@@ -1026,7 +1025,6 @@ void brx_anari_pal_device::renderer_set(brx_anari_vec3 background, BRX_ANARI_REN
     this->m_renderer_toon_shading_base_color = toon_shading_base_color;
     this->m_renderer_toon_shading_first_shade_color = toon_shading_first_shade_color;
     this->m_renderer_toon_shading_second_shade_color = toon_shading_second_shade_color;
-    this->m_renderer_toon_shading_high_color_power = toon_shading_high_color_power;
     this->m_renderer_toon_shading_rim_light_power = toon_shading_rim_light_power;
     this->m_renderer_toon_shading_rim_light_inside_mask = toon_shading_rim_light_inside_mask;
 }
@@ -1544,7 +1542,6 @@ void brx_anari_pal_device::renderer_render_frame(bool ui_view)
             none_update_set_uniform_buffer_destination->g_renderer_toon_shading_base_color = this->m_renderer_toon_shading_base_color;
             none_update_set_uniform_buffer_destination->g_renderer_toon_shading_first_shade_color = this->m_renderer_toon_shading_first_shade_color;
             none_update_set_uniform_buffer_destination->g_renderer_toon_shading_second_shade_color = this->m_renderer_toon_shading_second_shade_color;
-            none_update_set_uniform_buffer_destination->g_renderer_toon_shading_high_color_power = this->m_renderer_toon_shading_high_color_power;
             none_update_set_uniform_buffer_destination->g_renderer_toon_shading_rim_light_power = this->m_renderer_toon_shading_rim_light_power;
             none_update_set_uniform_buffer_destination->g_renderer_toon_shading_rim_light_inside_mask = this->m_renderer_toon_shading_rim_light_inside_mask;
         }

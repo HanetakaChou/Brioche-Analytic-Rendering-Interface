@@ -203,7 +203,7 @@
     <ProjectReference Include="..\..\McRT-Malloc\build-windows\McRT-Malloc.vcxproj">
       <Project>{998afb75-f449-402d-a300-30da702b3ddf}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\OpenCV\build-windows\opencv.vcxproj">
+    <ProjectReference Include="..\..\OpenCV\build-windows\OpenCV.vcxproj">
       <Project>{20af1bfb-9677-455b-bdf7-7cb9f1a96cf0}</Project>
     </ProjectReference>
     <ProjectReference Include="BRX-ANARI-GLSL.vcxproj">
